@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
-from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from sqlalchemy.orm import Session
+
 from database import get_db
 import models, schemas
-import os
+from utils import load_image
 
 router = APIRouter()
 
@@ -13,18 +15,30 @@ async def create_camera_calibration(
     calibration: schemas.CameraCalibrationCreate,
     db: Session = Depends(get_db)
 ):
-    return models.create_camera_calibration(db, calibration)
+    db_calibration = models.CameraCalibration(**calibration.dict())
+    db.add(db_calibration)
+    db.commit()
+    db.refresh(db_calibration)
+    return db_calibration
 
 @router.get("/", response_model=List[schemas.CameraCalibration])
 async def list_camera_calibrations(
     skip: int = 0,
     limit: int = 100,
-    camera_id: Optional[str] = None,
+    id: Optional[str] = None,
+    camera_name: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: Session = Depends(get_db)
 ):
-    return models.get_camera_calibrations(db, skip, limit, camera_id, start_date, end_date)
+    query = db.query(models.CameraCalibration)
+    if id:
+        query = query.filter(models.CameraCalibration.id == id)
+    if camera_name:
+        query = query.filter(models.CameraCalibration.camera_name == camera_name)
+    if start_date and end_date:
+        query = query.filter(models.CameraCalibration.calibration_date.between(start_date, end_date))
+    return query.offset(skip).limit(limit).all()
 
 @router.get("/{calibration_id}", response_model=schemas.CameraCalibration)
 async def get_camera_calibration(
@@ -32,7 +46,7 @@ async def get_camera_calibration(
     include_images: bool = False,
     db: Session = Depends(get_db)
 ):
-    calibration = models.get_camera_calibration(db, calibration_id)
+    calibration = db.query(models.CameraCalibration).get(calibration_id)
     if calibration is None:
         raise HTTPException(status_code=404, detail="Camera calibration not found")
     
@@ -47,7 +61,7 @@ async def upload_calibration_image(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    calibration = models.get_camera_calibration(db, calibration_id)
+    calibration = db.query(models.CameraCalibration).get(calibration_id)
     if calibration is None:
         raise HTTPException(status_code=404, detail="Camera calibration not found")
     

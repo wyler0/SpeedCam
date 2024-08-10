@@ -1,37 +1,56 @@
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-from database import get_db
-from models import CameraCalibration, SpeedCalibration, VehicleDetection
-from pydantic import BaseModel
-from datetime import datetime
+import os
 
-app = FastAPI()
+import asyncio
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
-# Pydantic models for request bodies
-class CameraCalibrationCreate(BaseModel):
-    camera_id: str
-    calibration_date: datetime
-    image_paths: list
-    calibration_matrix: dict
-    distortion_coefficients: dict
-    rotation_matrix: dict
-    translation_vector: dict
+from detection.dectector import Detector
+from routers import (
+    camera_calibrations_router,
+    vehicle_detections_router,
+    speed_calibrations_router,
+    live_detection_router
+)
 
-@app.post("/camera-calibrations/", response_model=dict)
-def create_camera_calibration(calibration: CameraCalibrationCreate, db: Session = Depends(get_db)):
-    db_calibration = CameraCalibration(**calibration.dict())
-    db.add(db_calibration)
-    db.commit()
-    db.refresh(db_calibration)
-    return {"id": db_calibration.id, "message": "Camera calibration created successfully"}
+app = FastAPI(title="Vehicle Tracking System API")
 
-@app.get("/camera-calibrations/", response_model=list)
-def read_camera_calibrations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    calibrations = db.query(CameraCalibration).offset(skip).limit(limit).all()
-    return calibrations
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Adjust this to your frontend's URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Add similar endpoints for SpeedCalibration and VehicleDetection
+# Serve the frontend
+@app.get("/", tags=["index"])
+async def index():
+    return FileResponse(os.path.join("static", "index.html"))
 
+# Launch detector
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    detector = Detector()
+    asyncio.create_task(detector.start())
+    yield
+    # Shutdown
+    # Add any cleanup code here if needed
+
+app.router.lifespan_context = lifespan
+
+# Endpoints
+app.include_router(camera_calibrations_router, prefix="/api/v1/camera-calibrations", tags=["camera calibrations"])
+app.include_router(vehicle_detections_router, prefix="/api/v1/vehicle-detections", tags=["vehicle detections"])
+app.include_router(speed_calibrations_router, prefix="/api/v1/speed-calibrations", tags=["speed calibrations"])
+app.include_router(live_detection_router, prefix="/api/v1/live-detection", tags=["live detection"])
+
+
+
+# Run the app
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

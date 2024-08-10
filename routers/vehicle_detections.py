@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from database import get_db
 import models, schemas
 
@@ -12,7 +12,11 @@ async def create_vehicle_detection(
     detection: schemas.VehicleDetectionCreate,
     db: Session = Depends(get_db)
 ):
-    return models.create_vehicle_detection(db, detection)
+    db_detection = models.VehicleDetection(**detection.dict())
+    db.add(db_detection)
+    db.commit()
+    db.refresh(db_detection)
+    return db_detection
 
 @router.get("/", response_model=List[schemas.VehicleDetection])
 async def list_vehicle_detections(
@@ -23,21 +27,54 @@ async def list_vehicle_detections(
     end_date: Optional[datetime] = None,
     min_speed: Optional[float] = None,
     max_speed: Optional[float] = None,
+    direction: Optional[schemas.VehicleDirection] = None,
     known_speed_only: bool = False,
     vehicle_ids: List[int] = Query(None, description="List of vehicle detection IDs to filter by"),
+    predefined_filter: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    return models.get_vehicle_detections(
-        db, skip, limit, speed_calibration_id, start_date, end_date,
-        min_speed, max_speed, known_speed_only, vehicle_ids
-    )
+    query = db.query(models.VehicleDetection)
+    query = query.filter(models.VehicleDetection.speed_calibration_id == speed_calibration_id)
+    
+    if predefined_filter:
+        now = datetime.utcnow()
+        if predefined_filter == 'TODAY':
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = now
+        elif predefined_filter == 'LAST_7_DAYS':
+            start_date = now - timedelta(days=7)
+            end_date = now
+        elif predefined_filter == 'LAST_30_DAYS':
+            start_date = now - timedelta(days=30)
+            end_date = now
+        elif predefined_filter == 'SPEEDING':
+            min_speed = 30  # Assuming 30 is the speed limit
+        elif predefined_filter == 'KNOWN_SPEED':
+            known_speed_only = True
+
+    if start_date and end_date:
+        query = query.filter(models.VehicleDetection.detection_date.between(start_date, end_date))
+    if min_speed is not None and max_speed is not None:
+        query = query.filter(models.VehicleDetection.estimated_speed.between(min_speed, max_speed))
+    elif min_speed is not None:
+        query = query.filter(models.VehicleDetection.estimated_speed >= min_speed)
+    elif max_speed is not None:
+        query = query.filter(models.VehicleDetection.estimated_speed <= max_speed)
+    if known_speed_only:
+        query = query.filter(models.VehicleDetection.true_speed.isnot(None))
+    if vehicle_ids:
+        query = query.filter(models.VehicleDetection.id.in_(vehicle_ids))
+    if direction:
+        query = query.filter(models.VehicleDetection.direction == direction)
+    
+    return query.offset(skip).limit(limit).all()
 
 @router.get("/{detection_id}", response_model=schemas.VehicleDetection)
 async def get_vehicle_detection(
     detection_id: int,
     db: Session = Depends(get_db)
 ):
-    detection = models.get_vehicle_detection(db, detection_id)
+    detection = db.query(models.VehicleDetection).get(detection_id)
     if detection is None:
         raise HTTPException(status_code=404, detail="Vehicle detection not found")
     return detection
@@ -48,7 +85,13 @@ async def update_vehicle_detection(
     detection: schemas.VehicleDetectionUpdate,
     db: Session = Depends(get_db)
 ):
-    updated_detection = models.update_vehicle_detection(db, detection_id, detection)
-    if updated_detection is None:
+    db_detection = db.query(models.VehicleDetection).get(detection_id)
+    if db_detection is None:
         raise HTTPException(status_code=404, detail="Vehicle detection not found")
-    return updated_detection
+    
+    for key, value in detection.dict(exclude_unset=True).items():
+        setattr(db_detection, key, value)
+    
+    db.commit()
+    db.refresh(db_detection)
+    return db_detection

@@ -1,48 +1,101 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
-from enum import IntEnum
+from custom_enums import VehicleDirection
 
-# Add VehicleDirection enum
-class VehicleDirection(IntEnum):
-    LEFT_TO_RIGHT = 0
-    RIGHT_TO_LEFT = 1
-
-class CameraCalibration(BaseModel):
-    id: Optional[int] = None
+class CameraCalibrationBase(BaseModel):
     camera_name: str
     calibration_date: datetime
-    image_paths: Optional[List[str]] = None
+    image_paths: List[str] = []
     calibration_matrix: dict
     distortion_coefficients: dict
     rotation_matrix: dict
     translation_vector: dict
 
-    class Config:
-        orm_mode = True
+class CameraCalibrationCreate(CameraCalibrationBase):
+    pass
 
-class SpeedCalibration(BaseModel):
-    id: Optional[int] = None
+class CameraCalibration(CameraCalibrationBase):
+    id: int
+    speed_calibrations: List["SpeedCalibration"] = []
+    
+    class Config:
+        from_attributes = True
+
+
+
+class SpeedCalibrationBase(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    calibration_date: datetime
     camera_calibration_id: int
-    vehicle_detections: List['VehicleDetection'] = []
+    calibration_date: datetime
 
+class SpeedCalibrationCreate(SpeedCalibrationBase):
+    pass
+
+class SpeedCalibrationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    camera_calibration_id: Optional[int] = None
+    calibration_date: Optional[datetime] = None
+
+class SpeedCalibration(SpeedCalibrationBase):
+    id: int
+    camera_calibration: Optional[CameraCalibration] = None
+    vehicle_detections: List["VehicleDetection"] = []
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-class VehicleDetection(BaseModel):
-    id: Optional[int] = None
+
+
+class VehicleDetectionBase(BaseModel):
     detection_date: datetime
     video_clip_path: Optional[str] = None
     direction: Optional[VehicleDirection] = None
-    estimated_speed: Optional[float] = None
-    confidence: Optional[float] = None
-    true_speed: Optional[float] = None
+    estimated_speed: Optional[float] = Field(default=None, ge=0, description="Estimated speed must be non-negative")
+    confidence: Optional[float] = Field(default=None, ge=0, description="Confidence must be non-negative")
+    true_speed: Optional[float] = Field(default=None, ge=0, description="True speed must be non-negative")
     optical_flow_path: Optional[str] = None
     speed_calibration_id: int
     error: Optional[str] = None
 
+class VehicleDetectionCreate(VehicleDetectionBase):
+    pass
+
+class VehicleDetectionUpdate(BaseModel):
+    video_clip_path: Optional[str] = None
+    estimated_speed: Optional[float] = Field(default=None, ge=0, description="Estimated speed must be non-negative")
+    true_speed: Optional[float] = Field(default=None, ge=0, description="True speed must be non-negative")
+    optical_flow_path: Optional[str] = None
+    direction: Optional[VehicleDirection] = None
+    confidence: Optional[float] = Field(default=None, ge=0, description="Confidence must be non-negative")
+    error: Optional[str] = None
+
+class VehicleDetection(VehicleDetectionBase):
+    id: int
+    speed_calibration: SpeedCalibration
+    
+    class Config:
+        from_attributes = True
+
+
+
+class LiveDetectionStateBase(BaseModel):
+    speed_calibration_id: Optional[int] = None
+    started_at: Optional[datetime] = None
+    running: bool = False
+    error: Optional[str] = None
+
+class LiveDetectionStateCreate(LiveDetectionStateBase):
+    pass
+
+class LiveDetectionStateUpdate(BaseModel):
+    speed_calibration_id: Optional[int] = None
+    started_at: Optional[datetime] = None
+    running: Optional[bool] = None
+    error: Optional[str] = None
+
+class LiveDetectionState(LiveDetectionStateBase):
     class Config:
         orm_mode = True
