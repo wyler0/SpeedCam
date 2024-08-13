@@ -2,7 +2,29 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../SpeedCam/speed-camera-v2"
+		},
+		{
+			"path": "../SpeedCam/speed-camera-optical-flow"
 		}
 	],
-	"settings": {}
+	"settings": {},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+		{
+			"type": "python",
+			"request": "launch",
+			"name": "Run FastAPI",
+			"module": "uvicorn",
+			"args": [
+				"main:app",
+				"--reload"
+			],
+			"console": "integratedTerminal"
+		}
+		]
+	}
 }

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, Enum, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -10,12 +12,15 @@ class CameraCalibration(Base):
 
     id = Column(Integer, primary_key=True)
     camera_name = Column(String, nullable=False)
-    calibration_date = Column(DateTime, nullable=False)
-    image_paths = Column(JSON, nullable=True)
-    calibration_matrix = Column(JSON, nullable=False)
-    distortion_coefficients = Column(JSON, nullable=False)
-    rotation_matrix = Column(JSON, nullable=False)
-    translation_vector = Column(JSON, nullable=False)
+    calibration_date = Column(DateTime, default=datetime.now)
+    images_path = Column(String, nullable=True)
+    rows = Column(Integer, nullable=False)
+    cols = Column(Integer, nullable=False)
+    calibration_matrix = Column(JSON, nullable=True)
+    distortion_coefficients = Column(JSON, nullable=True)
+    rotation_matrix = Column(JSON, nullable=True)
+    translation_vector = Column(JSON, nullable=True)
+    valid = Column(Boolean, default=False, nullable=False)
 
     speed_calibrations = relationship("SpeedCalibration", back_populates="camera_calibration")
 

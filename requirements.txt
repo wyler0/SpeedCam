@@ -4,3 +4,5 @@ aiosqlite==0.20.0
 uvicorn==0.30.5
 python-multipart==0.0.9
 alembic==1.13.2
+numpy
+opencv-python

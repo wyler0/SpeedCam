@@ -1,8 +1,8 @@
-"""First migration
+"""Update Camera Calibration
 
-Revision ID: 6b2fd032ae88
+Revision ID: 92acd2926891
 Revises: 
-Create Date: 2024-08-08 18:45:23.045696
+Create Date: 2024-08-13 12:38:18.482061
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6b2fd032ae88'
+revision: str = '92acd2926891'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -23,12 +23,15 @@ def upgrade() -> None:
     op.create_table('camera_calibrations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('camera_name', sa.String(), nullable=False),
-    sa.Column('calibration_date', sa.DateTime(), nullable=False),
-    sa.Column('image_paths', sa.JSON(), nullable=True),
-    sa.Column('calibration_matrix', sa.JSON(), nullable=False),
-    sa.Column('distortion_coefficients', sa.JSON(), nullable=False),
-    sa.Column('rotation_matrix', sa.JSON(), nullable=False),
-    sa.Column('translation_vector', sa.JSON(), nullable=False),
+    sa.Column('calibration_date', sa.DateTime(), nullable=True),
+    sa.Column('images_path', sa.String(), nullable=True),
+    sa.Column('rows', sa.Integer(), nullable=False),
+    sa.Column('cols', sa.Integer(), nullable=False),
+    sa.Column('calibration_matrix', sa.JSON(), nullable=True),
+    sa.Column('distortion_coefficients', sa.JSON(), nullable=True),
+    sa.Column('rotation_matrix', sa.JSON(), nullable=True),
+    sa.Column('translation_vector', sa.JSON(), nullable=True),
+    sa.Column('valid', sa.Boolean(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('live_detection_state',

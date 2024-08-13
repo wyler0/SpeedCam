@@ -1,16 +1,19 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
 from custom_enums import VehicleDirection
 
 class CameraCalibrationBase(BaseModel):
     camera_name: str
-    calibration_date: datetime
-    image_paths: List[str] = []
-    calibration_matrix: dict
-    distortion_coefficients: dict
-    rotation_matrix: dict
-    translation_vector: dict
+    rows: int
+    cols: int
+    calibration_date: Optional[datetime] = None
+    images_path: Optional[str] = None
+    calibration_matrix: Optional[Any] = None
+    distortion_coefficients: Optional[Any] = None
+    rotation_matrix: Optional[Any] = None
+    translation_vector: Optional[Any] = None
+    valid: Optional[bool] = Field(default=False)
 
 class CameraCalibrationCreate(CameraCalibrationBase):
     pass

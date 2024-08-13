@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getEndpoint } from '@/api/endpoints';
+import { toast } from 'react-hot-toast';
 
 export interface CameraCalibration {
   id: number;
   camera_name: string;
   calibration_date: string;
+  rows: number;
+  cols: number;
   description: string;
+  images_path: string;
+  thumbnail?: string;
+  images?: string[];
+  valid: boolean;
 }
 
 export function useCameraCalibrationService() {
@@ -81,12 +88,60 @@ export function useCameraCalibrationService() {
       if (!response.ok) {
         throw new Error('Failed to delete camera calibration');
       }
+      toast.success('Camera calibration deleted successfully');
       await fetchCalibrations();
     } catch (err) {
       console.error('Error deleting camera calibration:', err);
+      toast.error('Failed to delete camera calibration');
       throw err;
     }
   }, [fetchCalibrations]);
+
+  const fetchThumbnail = useCallback(async (calibration: CameraCalibration): Promise<string | undefined> => {
+    try {
+      const response = await fetch(`${getEndpoint('CAMERA_CALIBRATIONS')}/${calibration.id}/images`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch image list');
+      }
+      const { images } = await response.json();
+      if (images.length === 0) {
+        throw new Error('No images found for this calibration');
+      }
+      
+      const thumbnailUrl = images.find((image: string) => image.includes("grid")); // Get the first image with "grid" in the name
+      const thumbnailResponse = await fetch(thumbnailUrl);
+      if (!thumbnailResponse.ok) {
+        throw new Error('Failed to fetch thumbnail image');
+      }
+      const blob = await thumbnailResponse.blob();
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error('Error fetching thumbnail:', err);
+      return undefined;
+    }
+  }, []);
+  
+  const fetchAllImages = useCallback(async (calibration: CameraCalibration) => {
+    try {
+      const response = await fetch(`${getEndpoint('CAMERA_CALIBRATIONS')}/${calibration.id}/images`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch image list');
+      }
+      const { images } = await response.json();
+      const imagePromises = images.filter((imageUrl: string) => imageUrl.includes("grid")).map(async (imageUrl: string) => {
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to fetch image: ${imageUrl}`);
+        }
+        const blob = await imageResponse.blob();
+        return URL.createObjectURL(blob);
+      });
+      return await Promise.all(imagePromises);
+    } catch (err) {
+      console.error('Error fetching all images:', err);
+      return [];
+    }
+  }, []);
 
   return {
     calibrations,
@@ -96,5 +151,7 @@ export function useCameraCalibrationService() {
     addCalibration,
     updateCalibration,
     deleteCalibration,
+    fetchThumbnail,
+    fetchAllImages,
   };
 }

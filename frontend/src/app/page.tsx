@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { SpeedCam } from "@/components/speed-cam";
+import { SpeedCam } from "@/components/custom/speed-cam";
 
 
 export default function Home() {
