@@ -7,9 +7,12 @@ export function DetectionStatusToggle() {
   const { 
     isDetectionOn, 
     speedCalibrationId, 
-    calibrationIds, 
+    calibrationIds,
+    availableCameras,
+    selectedCamera,
     toggleDetection, 
-    updateSpeedCalibration 
+    updateSpeedCalibration,
+    updateSelectedCamera
   } = useDetectionStatusService();
 
   return (
@@ -17,6 +20,30 @@ export function DetectionStatusToggle() {
       <span className="text-lg font-bold" style={{ color: isDetectionOn ? 'black' : 'red' }}>
         {isDetectionOn ? 'Detection Status: ON' : 'Detection Status: OFF'}
       </span>
+      
+      {/* Camera Selection Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm">
+            {selectedCamera !== null 
+              ? availableCameras.find(cam => cam.id === selectedCamera)?.name || 'Unknown Camera'
+              : 'Select Camera...'}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Select Camera</DropdownMenuLabel>
+          {availableCameras.length > 0 ? (
+            availableCameras.map((camera) => (
+              <DropdownMenuItem key={camera.id} onClick={() => updateSelectedCamera(camera.id)}>
+                {camera.name}
+              </DropdownMenuItem>
+            ))
+          ) : (
+            <DropdownMenuItem disabled>No cameras available</DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
@@ -40,7 +67,7 @@ export function DetectionStatusToggle() {
       <Button 
         onClick={toggleDetection} 
         className={`px-4 py-2 rounded ${isDetectionOn ? 'bg-red-500' : 'bg-green-500'} text-white`}
-        disabled={!isDetectionOn && !speedCalibrationId}
+        disabled={!isDetectionOn && (!speedCalibrationId || selectedCamera === null)}
       >
         {isDetectionOn ? 'Turn Off' : 'Turn On'}
       </Button>

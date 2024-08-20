@@ -5,11 +5,9 @@
 .DS_Store
 .idea
 .mypy_cache
-.mypy_cache/
-.mypy_cache/*
-.mypy_cache/__pycache__
-.mypy_cache/__pycache__/*
-.mypy_cache/__pycache__/__pycache__
-.mypy_cache/__pycache__/__pycache__/*
+**/.mypy_cache/**
+**/__pycache__/**
+*.db
 
 frontend/src/components/ui/*.tsx
+data/*

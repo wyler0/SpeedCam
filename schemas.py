@@ -87,6 +87,7 @@ class VehicleDetection(VehicleDetectionBase):
 class LiveDetectionStateBase(BaseModel):
     speed_calibration_id: Optional[int] = None
     started_at: Optional[datetime] = None
+    camera_id: Optional[int] = None
     running: bool = False
     error: Optional[str] = None
 
@@ -98,6 +99,7 @@ class LiveDetectionStateUpdate(BaseModel):
     started_at: Optional[datetime] = None
     running: Optional[bool] = None
     error: Optional[str] = None
+    camera_id: Optional[int] = None
 
 class LiveDetectionState(LiveDetectionStateBase):
     class Config:

@@ -8,7 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from database import get_db
 from models import SpeedCalibration, LiveDetectionState as LiveDetectionStateModel
-from schemas import LiveDetectionState, LiveDetectionStateCreate, LiveDetectionStateUpdate
+from schemas import LiveDetectionState
+from core.video.webcam import get_available_cameras
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -76,36 +77,58 @@ async def stop_live_detection(db: Session = Depends(get_db)):
 
 @router.put("/update")
 async def update_live_detection(
-    speed_calibration_id: int,
+    speed_calibration_id: Optional[int] = None,
+    camera_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     try:
-        speed_calibration = db.query(SpeedCalibration).get(speed_calibration_id)
-        if speed_calibration is None:
-            raise HTTPException(status_code=404, detail="Speed calibration not found")
-        
         state = await initialize_or_get_live_detection_state(db)
-        if state:
-            state.speed_calibration_id = speed_calibration_id
-            if state.running:
-                state.started_at = datetime.now()
-            db.commit()
-            return {"message": "Live detection updated"}
-        else:
+        if state is None:
             logger.error("Error getting live detection status, state DNE while updating.")
             raise HTTPException(status_code=500, detail="No live detection found, which is not possible.")
+
+        if speed_calibration_id is not None:
+            speed_calibration = db.query(SpeedCalibration).get(speed_calibration_id)
+            if speed_calibration is None:
+                raise HTTPException(status_code=404, detail="Speed calibration not found")
+            state.speed_calibration_id = speed_calibration_id
+
+        if camera_id is not None and camera_id != "":
+            state.camera_id = camera_id
+        elif camera_id == "":
+            logger.error("Received empty camera_id in request body")
+            raise HTTPException(status_code=400, detail="camera_id cannot be empty")
+
+        if state.running:
+            state.started_at = datetime.now()
+        
+        db.commit()
+        return {"message": "Live detection updated"}
         
     except SQLAlchemyError as e:
         db.rollback()
         logger.error("Error updating live detection: %s", str(e))
         raise HTTPException(status_code=500, detail="Error updating live detection")
 
+@router.get("/available_cameras")
+async def list_available_cameras():
+    try:
+        devices = get_available_cameras()
+        available_cameras = {}
+        for device_index, device_name in enumerate(devices):
+            available_cameras[device_index] = device_name[0]
+
+        return {"available_cameras": available_cameras}
+    
+    except Exception as e:
+        logger.error("Error listing available cameras: %s", str(e))
+        raise HTTPException(status_code=500, detail="Error listing available cameras")
 
 
 async def initialize_or_get_live_detection_state(db: Session):
     state = db.query(LiveDetectionStateModel).first()
     if state is None:
-        state = LiveDetectionStateModel(speed_calibration_id=None, running=False, started_at=None)
+        state = LiveDetectionStateModel(speed_calibration_id=None, running=False, started_at=None, camera_id=None)
         db.add(state)
         db.commit()
     return state

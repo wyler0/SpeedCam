@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from detection.dectector import Detector
+from core.estimation.estimator import SpeedEstimator
 from routers import (
     camera_calibrations_router,
     vehicle_detections_router,
@@ -34,8 +34,8 @@ async def index():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    detector = Detector()
-    asyncio.create_task(detector.start())
+    #estimator = SpeedEstimator(None)
+    #asyncio.create_task(estimator.start())
     yield
     # Shutdown
     # Add any cleanup code here if needed

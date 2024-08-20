@@ -12,40 +12,31 @@ import cv2
 # from detector import Detector
 # from video import VideoStream
 
+from .estimator_config import EstimatorConfig
+from .estimator_schemas import TrackedVehicleEvent, TrackedVehicle
+
 logger = logging.getLogger(__name__)
 
+"""
+#TODO:
+    - [ ] Get live mode working
+    - [ ] Add file model
+"""
+
 class SpeedEstimator():
-    """ Speed Estimator class for vehicle detection. """
-    
-    
-    tracked_vehicle_template = {
-        "vehicle_id": None,
-        "start_time": None, # Video time ms
-        "elapsed_time": None, # Vehicle Last Event Time - Start time
-        "speed_estimate": None,
-        "speed_error": None,
-        "direction": None, # See directions enum
-        "events": [],
-    }
-    
-    tracked_vehicle_event_template = {
-        "frame_number": None,
-        "event_time": None, # Relative to video start time
-        "bbox": None # 0 - x, 1, - y, 2 xWidth, 3 yWidth
-    }
+    """ Speed Estimator class for vehicle detection. """ 
     statusbar_height = 200
         
-    def __init__(self, camera_calibration_id, config):
+    def __init__(self, camera_calibration_id, config: EstimatorConfig = None):
         """ Execute processor. 
             mode:
                 LIVE - Stream and predict on live data
-                FILE - Stream and predict on saved file
         """
-        self.config = config
+        self.config = config if config is not None else EstimatorConfig()
         self.init_constants()
         
         # Create detector
-        self.detector = Detector(config)
+        self.detector = None#Detector(config)
 
         # Setup camera calibration
         if self.config.should_dewarp:
@@ -60,9 +51,10 @@ class SpeedEstimator():
             print(f"Completed known vehicle calibration.")
         
         # Get target stream
-        self.video = VideoStream(
-                config.input_video if config.input_video is not None else config.webcam_source, 
-                WEBCAM_HFLIP=config.flip_input_h, WEBCAM_VFLIP=config.flip_input_v)
+        self.video = None
+        # VideoStream(
+        #         config.input_video if config.input_video is not None else config.webcam_source, 
+        #         WEBCAM_HFLIP=config.flip_input_h, WEBCAM_VFLIP=config.flip_input_v)
         self.video.start()
         
         # Skip forward as needed
@@ -72,6 +64,37 @@ class SpeedEstimator():
         # Get initial images
         self.target_imgs = [self.video.read(), self.video.read()]
         assert self.target_imgs[0] is not None, "Error loading target video"
+    
+    def init_video(self):
+
+        def get_available_webcam_sources():
+            available_sources = []
+            # Test the first 10 possible webcam indices
+            for i in range(10):
+                cap = cv2.VideoCapture(i)
+                if cap.isOpened():
+                    available_sources.append(i)
+                    cap.release()
+            return available_sources
+        
+        # Example usage
+        print("Available webcam sources:", get_available_webcam_sources())
+        # Initialize the webcam stream
+        self.video_capture = cv2.VideoCapture(self.config.webcam_source)
+        
+        if not self.video_capture.isOpened():
+            raise Exception("Could not open video device")
+        
+        # Set the width and height of the video capture
+        self.video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.CAMERA_WIDTH)
+        self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.CAMERA_HEIGHT)
+        
+        # Read the first frame to ensure the stream is working
+        ret, frame = self.video_capture.read()
+        if not ret:
+            raise Exception("Failed to read from webcam")
+        
+        return frame
     
     def start(self, writeout=True):
         self.start_time = self.video.get_time_ms()
@@ -83,8 +106,8 @@ class SpeedEstimator():
     
     def init_constants(self):
         ### Fix rounding problems with picamera resolution
-        self.CAMERA_WIDTH = (self.config.CAMERA_WIDTH + 31) // 32 * 32 
-        self.CAMERA_HEIGHT = (self.config.CAMERA_HEIGHT + 15) // 16 * 16
+        # self.CAMERA_WIDTH = (self.config.CAMERA_WIDTH + 31) // 32 * 32 
+        # self.CAMERA_HEIGHT = (self.config.CAMERA_HEIGHT + 15) // 16 * 16
 
         # Define constants & conversion units
         #self.__PX_TO_KPH_L2R = float(cal_obj_mm_L2R / cal_obj_px_L2R * 0.0036) ### pixel width to speed conversion

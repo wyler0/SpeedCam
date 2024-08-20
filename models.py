@@ -58,4 +58,5 @@ class LiveDetectionState(Base):
     speed_calibration_id = Column(Integer, nullable=True)
     started_at = Column(DateTime, nullable=True)
     running = Column(Boolean, default=False)
+    camera_id = Column(Integer, nullable=True)
     error = Column(String, nullable=True)

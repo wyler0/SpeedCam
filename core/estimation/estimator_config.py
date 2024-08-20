@@ -1,4 +1,5 @@
-class config:
+class EstimatorConfig:
+    pass
     #### PROGRAM ####
     mode = 'speed'
     detector = 'YOLO'

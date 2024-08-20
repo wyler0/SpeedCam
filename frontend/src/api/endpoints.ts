@@ -16,6 +16,10 @@ export const API_ENDPOINTS = {
 
   // Live detection
   LIVE_DETECTION: `${API_BASE_URL}/live-detection`,
+  AVAILABLE_CAMERAS: `${API_BASE_URL}/live-detection/available_cameras`,
+  START_DETECTION: `${API_BASE_URL}/live-detection/start`,
+  STOP_DETECTION: `${API_BASE_URL}/live-detection/stop`,
+  DETECTION_STATUS: `${API_BASE_URL}/live-detection/status`,
 
   // Validate calibration image
   VALIDATE_CALIBRATION_IMAGE: `${API_BASE_URL}/camera-calibrations/validate`,

@@ -6,3 +6,5 @@ python-multipart==0.0.9
 alembic==1.13.2
 numpy
 opencv-python
+pygrabber==0.2
+pyobjc
