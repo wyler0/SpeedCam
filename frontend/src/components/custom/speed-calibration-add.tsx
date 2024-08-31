@@ -28,23 +28,36 @@ import { TrashIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/custo
 import { LatestDetectionImage } from "@/components/custom/latest-detection-image"
 import { DetectionStatusCalibrationToggle } from "@/components/custom/detection-status-calibration"
 import { useCalibrationStatusService } from '@/services/detectionStatusCalibrationService'
-import { useVehicleDetectionService, Direction } from '@/services/vehicleDetectionService'
+import { Direction, Detection, VehicleDetectionFilters } from '@/services/vehicleDetectionService'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { BASE_URL } from '@/api/endpoints'
 import toast from 'react-hot-toast'
 import { Label } from "@/components/ui/label"
 
-interface SpeedCalibrationAddProps {
-  onClose: () => void;
-  onCalibrationAdded: () => void;
-  speedCalibrationId: number;
+export interface SpeedCalibrationAddProps {
+  detections: Detection[];
+  updateFilters: (newFilters: Partial<VehicleDetectionFilters>) => void;
+  updateDetection: (id: number, updates: Partial<Detection>) => Promise<void>;
+  deleteDetection: (id: number) => Promise<void>;
 }
 
 interface DetectionImages {
   [detectionId: number]: string[];
 }
 
-export function SpeedCalibrationAdd({ onClose, onCalibrationAdded, speedCalibrationId }: SpeedCalibrationAddProps) {
+export function SpeedCalibrationAdd({
+  detections,
+  updateFilters,
+  updateDetection,
+  deleteDetection,
+  onClose,
+  onCalibrationAdded,
+  speedCalibrationId, // Moved speedCalibrationId to the destructured props
+}: SpeedCalibrationAddProps & {
+  onClose: () => void;
+  onCalibrationAdded: () => void;
+  speedCalibrationId: number; // Added speedCalibrationId to the destructured props
+}) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCloseWarningOpen, setIsCloseWarningOpen] = useState(false)
@@ -55,10 +68,11 @@ export function SpeedCalibrationAdd({ onClose, onCalibrationAdded, speedCalibrat
   const [calibrationName, setCalibrationName] = useState("Enter Calibration Name Here")
   
   const { uploadCalibrationVideo, processingVideo, submitSpeedCalibration } = useCalibrationStatusService();
-  const { detections, updateFilters, updateDetection, deleteDetection } = useVehicleDetectionService();
 
   useEffect(() => {
-    updateFilters({ speed_calibration_id: speedCalibrationId, knownSpeedOnly: false });
+    if (speedCalibrationId) { // Added check to ensure speedCalibrationId is defined
+      updateFilters({ speed_calibration_id: speedCalibrationId, knownSpeedOnly: false });
+    }
   }, [speedCalibrationId, updateFilters]);
 
   useEffect(() => {
@@ -77,20 +91,17 @@ export function SpeedCalibrationAdd({ onClose, onCalibrationAdded, speedCalibrat
                 const imageResponse = await fetch(`${BASE_URL}${path}`);
                 if (!imageResponse.ok) throw new Error(`Failed to fetch image: ${path}`);
                 const blob = await imageResponse.blob();
-                return URL.createObjectURL(blob);
+                return { url: URL.createObjectURL(blob), name: path }; // Store both URL and name
               })
             );
-            // Step 4: Sort images by detection date
-            // Images have names like 1725114545.757344_0.png, sort them by the first part of the name
+            // Step 4: Sort images by detection date using the names from imagePaths
             fetchedImages.sort((a, b) => {
-              const dateA = new Date(a.split('_')[0]);
-              console.log(dateA);
-              const dateB = new Date(b.split('_')[0]);
-              console.log(dateB);
+              const dateA = new Date(Number(a.name.split('_')[0].split('images/')[1])*1000)
+              const dateB = new Date(Number(b.name.split('_')[0].split('images/')[1])*1000)
               return dateA.getTime() - dateB.getTime();
             });
 
-            setDetectionImages(prev => ({ ...prev, [detection.id]: fetchedImages }));
+            setDetectionImages(prev => ({ ...prev, [detection.id]: fetchedImages.map(image => image.url) }));
             setCurrentImageIndex(prev => ({ ...prev, [detection.id]: 0 }));
           } catch (error) {
             console.error('Error fetching detection images:', error);
@@ -183,6 +194,7 @@ export function SpeedCalibrationAdd({ onClose, onCalibrationAdded, speedCalibrat
       }
     }
     setVideoFile(null);
+    
     setVideoSubmitted(false);
     // Clear the input value
     event.target.value = '';

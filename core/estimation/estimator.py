@@ -190,57 +190,64 @@ class SpeedEstimator():
             start_frame = self.video.frames_read
             last_image_write_time = start_frame
             
-            while self.running and self.get_next_image() and not stop_signal.is_set():
-                # Apply dewarp
-                self.target_imgs[1] = self.apply_camera_dewarp(self.target_imgs[1])
+            try:
+                while self.running and self.get_next_image() and not stop_signal.is_set():
+                    # Apply dewarp
+                    self.target_imgs[1] = self.apply_camera_dewarp(self.target_imgs[1])
 
-                # Get optical flow flows
-                self.flows = self.detector.compute_flow(self.target_imgs)
-                self.flow_groups = self.detector.group_flows(self.flows)
-                
-                if len(self.flows[0]) > 0:
-                    # Extract events from bboxes
-                    events = self.get_filter_new_events()
-                    if len(events) > 0:
-                        events = self.correlate_events_and_vehicles(events)
-                        img_written = False
-                        # Write the all detections latest detection frame for the frontend to render
-                        if self.video.frames_read - last_image_write_time > self.config.image_write_interval_frames:
-                            paths = self.detector.visualize_flow_groups([[event.flows for _, event in events]], self.target_imgs, output_path=f"{self.data_path}/images/{time.time()}")
-                            shutil.move(paths[0], LATEST_DETECTION_IMAGE_PATH)
-                            last_image_write_time = self.video.frames_read
-                            img_written = True
+                    # Get optical flow flows
+                    self.flows = self.detector.compute_flow(self.target_imgs)
+                    self.flow_groups = self.detector.group_flows(self.flows)
+                    
+                    if len(self.flows[0]) > 0:
+                        # Extract events from bboxes
+                        events = self.get_filter_new_events()
+                        if len(events) > 0:
+                            events = self.correlate_events_and_vehicles(events)
+                            img_written = False
+                            # Write the all detections latest detection frame for the frontend to render
+                            if self.video.frames_read - last_image_write_time > self.config.image_write_interval_frames:
+                                paths = self.detector.visualize_flow_groups([[event.flows for _, event in events]], self.target_imgs, output_path=f"{self.data_path}/images/{time.time()}")
+                                shutil.move(paths[0], LATEST_DETECTION_IMAGE_PATH)
+                                last_image_write_time = self.video.frames_read
+                                img_written = True
+                                
+                                # Signal the frontend
+                                self.state = db.query(models.LiveDetectionState).first()
+                                self.state.has_new_image = True
+                                db.commit()
                             
-                            # Signal the frontend
-                            self.state = db.query(models.LiveDetectionState).first()
-                            self.state.has_new_image = True
-                            db.commit()
-                        
-                        # Add event and or new vehicles
-                        for event_id, event in events:
-                            # Visualize flow groups for the event
-                            if img_written:
-                                # Flow groups viz expects [Frame, Group, Flow Data]
-                                paths = self.detector.visualize_flow_groups([[event.flows]], self.target_imgs, output_path=f"{self.data_path}/images/{time.time()}")
-                                event.image_path = paths[0]
-                                    
-                            self.add_vehicle_event(event, vehicle = self.tracking_dict.get(event_id, None))
-                        
+                            # Add event and or new vehicles
+                            for event_id, event in events:
+                                # Visualize flow groups for the event
+                                if img_written:
+                                    # Flow groups viz expects [Frame, Group, Flow Data]
+                                    paths = self.detector.visualize_flow_groups([[event.flows]], self.target_imgs, output_path=f"{self.data_path}/images/{time.time()}")
+                                    event.image_path = paths[0]
+                                        
+                                self.add_vehicle_event(event, vehicle = self.tracking_dict.get(event_id, None))
+                            
+                    # Check for finished events
+                    self.check_finished_and_stale_events(db)
+            
                 # Check for finished events
-                self.check_finished_and_stale_events(db)
-        
-            # Check for finished events
-            self.running = False
-            self.check_finished_and_stale_events(db, final=True)
-            
-            # Clean up
-            shutil.rmtree(self.images_path)
-            
-            # Update state
-            self.state = db.query(models.LiveDetectionState).first()
-            self.state.running = False
-            self.state.processing_video = False
-            db.commit()
+                self.running = False
+                self.check_finished_and_stale_events(db, final=True)
+                
+                # Clean up
+                shutil.rmtree(self.images_path)
+                
+                # Update state
+                self.state: schemas.LiveDetectionState = db.query(models.LiveDetectionState).first()
+                self.state.running = False
+                self.state.processing_video = False
+                db.commit()
+            except Exception as e:
+                logger.error(f"Error in run_loop: {e}. Disabling estimator.")
+                self.state.running = False
+                self.state.processing_video = False
+                self.state.error = str(e)
+                db.commit()
     
     def start(self) -> multiprocessing.Event:
         self.running = True

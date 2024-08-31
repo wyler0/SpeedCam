@@ -64,13 +64,16 @@ async def start_live_detection(db: Session = Depends(get_db)
             if state.video_path is not None and state.camera_source is None:
                 state.processing_video = True
             
+            db.commit()
             # Start the estimator
             estimator.start()
         else:
+            if state.video_path is not None and state.camera_source is None:
+                state.processing_video = False
+            db.commit()
             logger.error("Error getting live detection status, state DNE while starting.")
             raise HTTPException(status_code=500, detail="No live detection found, which is not possible.")
         
-        db.commit()
         return {"message": "Live detection started"}
     
     except SQLAlchemyError as e:
@@ -272,6 +275,9 @@ async def upload_speed_calibration_video(
     speed_calibration: Optional[SpeedCalibration] = db.query(SpeedCalibration).get(state.speed_calibration_id)
     if speed_calibration is None or speed_calibration.camera_calibration is None:
         raise HTTPException(status_code=400, detail="Please set a camera calibration before uploading a video.")
+    
+    state.processing_video = True
+    db.commit()
     
     # Fetch the video to disk
     video_id = uuid.uuid4()

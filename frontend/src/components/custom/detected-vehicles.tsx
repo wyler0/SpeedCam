@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ChartContainer } from "@/components/ui/chart"
 import { Cell, XAxis, ScatterChart, Scatter, YAxis, ZAxis, Tooltip, Legend } from "recharts"
@@ -12,17 +12,35 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { addDays } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { addDays, format } from 'date-fns';
 
-import { useVehicleDetectionService, Detection, Direction, PredefinedFilterType, VehicleDetectionFilters } from '@/services/vehicleDetectionService';
-import { useDetectionStatusService } from '@/services/detectionStatusService';
+import { Detection, Direction, PredefinedFilterType, VehicleDetectionFilters } from '@/services/vehicleDetectionService';
+import { SpeedCalibration } from '@/services/detectionStatusService';
 import { EyeIcon, FilterIcon, CalendarIcon } from '@/components/custom/icons';
-import { format } from 'date-fns';
 
-export function DetectedVehicles() {
-  const { detections, loading, error, filters, updateFilters, PredefinedFilters } = useVehicleDetectionService();
-  const { speedCalibrationId, calibrations, fetchCalibrationIds } = useDetectionStatusService();
+interface DetectedVehiclesProps {
+  detections: Detection[];
+  loading: boolean;
+  error: string | null;
+  filters: VehicleDetectionFilters;
+  updateFilters: (newFilters: Partial<VehicleDetectionFilters>) => void;
+  PredefinedFilters: Record<string, PredefinedFilterType>;
+  speedCalibrationId: string | null;
+  calibrations: SpeedCalibration[];
+  fetchCalibrationIds: () => Promise<void>;
+}
+
+export function DetectedVehicles({
+  detections,
+  loading,
+  error,
+  filters,
+  updateFilters,
+  PredefinedFilters,
+  speedCalibrationId,
+  calibrations,
+  fetchCalibrationIds,
+}: DetectedVehiclesProps) {
   const [tempFilters, setTempFilters] = useState<VehicleDetectionFilters>({});
   const [isOpen, setIsOpen] = useState(false);
 
@@ -334,7 +352,7 @@ export function DetectedVehicles() {
                       </TableRow>
                     </TableHeader>
                       <TableBody>
-                        {detections.map((detection) => (
+                        {detections.filter(detection => detection.real_world_speed_estimate != null).map((detection) => (
                           <TableRow key={detection.id}>
                             <TableCell>{detection.detection_date}</TableCell>
                             <TableCell>{detection.speed_calibration_id}</TableCell>

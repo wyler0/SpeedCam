@@ -118,8 +118,10 @@ async def delete_vehicle_detection(
         raise HTTPException(status_code=404, detail="Vehicle detection not found")
     
     # Delete the detection data
-    detection_dir = "/".join(db_detection.thumbnail_path.split("/")[:-1])
-    shutil.rmtree(os.path.join(DETECTIONS_DATA_PATH, detection_dir))
+    if db_detection.thumbnail_path:
+        detection_dir = "/".join(db_detection.thumbnail_path.split("/")[:-1])
+        if os.path.exists(os.path.join(DETECTIONS_DATA_PATH, detection_dir)):
+            shutil.rmtree(os.path.join(DETECTIONS_DATA_PATH, detection_dir))
     
     # Delete the detection from the database
     db.delete(db_detection)

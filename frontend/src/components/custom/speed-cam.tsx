@@ -36,8 +36,58 @@ import { SpeedCalibrations } from "@/components/custom/speed-calibrations"
 import { CameraCalibrations } from "@/components/custom/camera-calibrations"
 import { LatestDetectionImage } from "@/components/custom/latest-detection-image"
 
+// Lift shared state into this root component
+
+// camera-calibrations.tsx, detection-status-calibration.tsx
+//import { useCameraCalibrationService, CameraCalibration } from '@/services/cameraCalibrationService'; 
+// speed-calibrations.tsx
+//import { useSpeedCalibrationService } from '@/services/speedCalibrationService'; 
+
+
+// detected-vehicles.tsx, !DONE!
+// detection-statistics.tsx !DONE!
+// speed-calibration-add.tsx
+import { useVehicleDetectionService, Detection, Direction, PredefinedFilterType, VehicleDetectionFilters } from '@/services/vehicleDetectionService'; 
+// detected-vehicles.tsx !DONE!
+// detection-statistics.tsx !DONE!
+// detection-status.tsx !DONE!
+import { useDetectionStatusService } from '@/services/detectionStatusService'; 
+
+
+
 export function SpeedCam() {
-  
+
+  // Setup the state for the SpeedCam component
+
+  const {
+    detections, 
+    loading, 
+    error, 
+    filters, 
+    updateFilters, 
+    getStatistics, 
+    PredefinedFilters, 
+    updateDetection, 
+    deleteDetection, 
+    startPolling 
+  } = useVehicleDetectionService();
+
+  const {
+    isDetectionOn,
+    availableCameras,
+    selectedCamera,
+    processingVideo,
+    isCalibrationMode,
+    fetchDetectionStatus,
+    updateSelectedCamera,
+    speedCalibrationId,
+    calibrations,
+    toggleDetection,
+    updateSpeedCalibration,
+    fetchCalibrationIds,
+  } = useDetectionStatusService();
+
+
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
     const target = document.getElementById(targetId);
@@ -75,20 +125,53 @@ export function SpeedCam() {
           <section id="real-time-detection">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Real-Time Detection</h2>
-              <DetectionStatusToggle />
+              <DetectionStatusToggle 
+                isDetectionOn={isDetectionOn}
+                speedCalibrationId={speedCalibrationId}
+                calibrations={calibrations}
+                availableCameras={availableCameras}
+                selectedCamera={selectedCamera ? parseInt(selectedCamera) : null}
+                processingVideo={processingVideo}
+                toggleDetection={toggleDetection}
+                updateSpeedCalibration={updateSpeedCalibration}
+                updateSelectedCamera={updateSelectedCamera}
+              />
             </div>
             <div className="grid gap-6 mt-6">
 
               <LatestDetectionImage />
             </div>
             <div className="grid gap-6 mt-6">
-              <DetectionStatistics />
+              <DetectionStatistics 
+                detections={detections}
+                loading={loading}
+                error={error}
+                filters={filters}
+                updateFilters={updateFilters}
+                getStatistics={getStatistics}
+                speedCalibrationId={speedCalibrationId}
+              />
             </div>
           </section>
           <section id="detected-vehicles">
-            <DetectedVehicles />
+            <DetectedVehicles 
+              detections={detections}
+              loading={loading}
+              error={error}
+              filters={filters}
+              updateFilters={updateFilters}
+              PredefinedFilters={PredefinedFilters}
+              speedCalibrationId={speedCalibrationId}
+              calibrations={calibrations}
+              fetchCalibrationIds={fetchCalibrationIds}
+            />
           </section>
-          <SpeedCalibrations />
+          <SpeedCalibrations 
+            detections={detections}
+            updateFilters={updateFilters}
+            updateDetection={updateDetection}
+            deleteDetection={deleteDetection}
+          />
           <CameraCalibrations />
         </div>
       </main>

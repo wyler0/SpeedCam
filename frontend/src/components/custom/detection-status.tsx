@@ -1,26 +1,31 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { useDetectionStatusService } from '@/services/detectionStatusService';
+import { CameraInfo } from "@/services/sharedDetectionStatusService";
 
-export function DetectionStatusToggle() {
-  const { 
-    isDetectionOn, 
-    speedCalibrationId, 
-    calibrations,
-    availableCameras,
-    selectedCamera,
-    processingVideo,
-    toggleDetection, 
-    updateSpeedCalibration,
-    updateSelectedCamera,
-    fetchCalibrationIds,
-  } = useDetectionStatusService();
+interface DetectionStatusToggleProps {
+  isDetectionOn: boolean;
+  speedCalibrationId: string | null;
+  calibrations: Array<{ id: number; name: string; valid: boolean }>;
+  availableCameras: CameraInfo[];
+  selectedCamera: number | null;
+  processingVideo: boolean;
+  toggleDetection: () => void;
+  updateSpeedCalibration: (id: string) => void;
+  updateSelectedCamera: (id: string) => Promise<void>;
+}
 
-  React.useEffect(() => {
-    fetchCalibrationIds();
-  }, [fetchCalibrationIds]);
-
+export function DetectionStatusToggle({
+  isDetectionOn,
+  speedCalibrationId,
+  calibrations,
+  availableCameras,
+  selectedCamera,
+  processingVideo,
+  toggleDetection,
+  updateSpeedCalibration,
+  updateSelectedCamera,
+}: DetectionStatusToggleProps) {
   return (
     <div className="flex items-center gap-4">
       <span className="text-lg font-bold" style={{ color: isDetectionOn ? 'black' : 'red' }}>
@@ -32,7 +37,7 @@ export function DetectionStatusToggle() {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
             {selectedCamera !== null 
-              ? availableCameras.find(cam => cam.id === selectedCamera)?.name || 'Unknown Camera'
+              ? availableCameras.find(cam => cam.id === selectedCamera.toString())?.name || 'Unknown Camera'
               : 'Select Camera...'}
           </Button>
         </DropdownMenuTrigger>
@@ -40,7 +45,7 @@ export function DetectionStatusToggle() {
           <DropdownMenuLabel>Select Camera</DropdownMenuLabel>
           {availableCameras.length > 0 ? (
             availableCameras.map((camera) => (
-              <DropdownMenuItem key={camera.id} onClick={() => updateSelectedCamera(camera.id)}>
+              <DropdownMenuItem key={camera.id} onClick={() => updateSelectedCamera(camera.id.toString())}>
                 {camera.name}
               </DropdownMenuItem>
             ))

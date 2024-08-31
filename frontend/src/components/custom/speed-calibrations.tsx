@@ -6,17 +6,21 @@ import { TrashIcon } from "@/components/custom/icons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useSpeedCalibrationService } from '@/services/speedCalibrationService';
-import { SpeedCalibrationAdd } from "./speed-calibration-add";
 import { useCalibrationStatusService } from '@/services/detectionStatusCalibrationService';
+import { SpeedCalibrationAdd, SpeedCalibrationAddProps } from "./speed-calibration-add";
 import toast from 'react-hot-toast';
 
-export function SpeedCalibrations() {
+export function SpeedCalibrations({
+  detections,
+  updateFilters,
+  updateDetection,
+  deleteDetection,
+}: SpeedCalibrationAddProps) {
+  
   const {
     calibrations,
     loading,
     error,
-    addCalibration,
-    updateCalibration,
     deleteCalibration
   } = useSpeedCalibrationService();
 
@@ -141,6 +145,12 @@ export function SpeedCalibrations() {
       {isAddCalibrationOpen && newSpeedCalibrationId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <SpeedCalibrationAdd 
+            // From service
+            detections={detections}
+            updateFilters={updateFilters}
+            updateDetection={updateDetection}
+            deleteDetection={deleteDetection}
+            // From this component
             onClose={handleCloseAddCalibration}
             onCalibrationAdded={() => {
               // Implement logic to refresh calibrations

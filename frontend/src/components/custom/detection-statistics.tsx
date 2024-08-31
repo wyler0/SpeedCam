@@ -1,15 +1,29 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { useVehicleDetectionService } from '@/services/vehicleDetectionService';
-import { useDetectionStatusService } from '@/services/detectionStatusService';
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertTriangle } from "lucide-react"
+import { Detection, VehicleDetectionFilters } from '@/services/vehicleDetectionService';
 
-export function DetectionStatistics() {
-  const { detections, loading, error, filters, updateFilters, getStatistics } = useVehicleDetectionService();
-  const { speedCalibrationId } = useDetectionStatusService();
+interface DetectionStatisticsProps {
+  detections: Detection[];
+  loading: boolean;
+  error: string | null;
+  filters: VehicleDetectionFilters;
+  updateFilters: (newFilters: Partial<VehicleDetectionFilters>) => void;
+  getStatistics: () => { vehiclesDetected: number; averageSpeed: number; speedingViolations: number };
+  speedCalibrationId: string | null;
+}
 
-  useEffect(() => {
+export function DetectionStatistics({
+  detections,
+  loading,
+  error,
+  filters,
+  updateFilters,
+  getStatistics,
+  speedCalibrationId,
+}: DetectionStatisticsProps) {
+  React.useEffect(() => {
     if (speedCalibrationId) {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
