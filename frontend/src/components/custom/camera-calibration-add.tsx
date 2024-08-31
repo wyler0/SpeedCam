@@ -1,12 +1,18 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
+
+
 import React, { useState, useRef, useCallback } from 'react';
 import { Camera, CameraType } from 'react-camera-pro';
+import { toast } from "react-hot-toast";
+
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { CameraIcon, XIcon, SpinnerIcon, CheckIcon, UploadIcon } from "@/components/custom/icons"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import { getEndpoint } from "@/api/endpoints";
-import { toast } from "react-hot-toast";
 
 interface CameraCalibrationAddProps {
   onClose: () => void;

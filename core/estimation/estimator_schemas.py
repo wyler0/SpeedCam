@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from custom_enums import VehicleDirection

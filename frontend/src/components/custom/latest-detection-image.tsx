@@ -1,6 +1,9 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
 import { useState, useEffect } from 'react';
-import { getEndpoint } from '@/api/endpoints';
 import Image from 'next/image';
+
+import { getEndpoint } from '@/api/endpoints';
 
 export function LatestDetectionImage() {
   const [imageUrl, setImageUrl] = useState<string | null>(getEndpoint('LATEST_IMAGE_URL'));

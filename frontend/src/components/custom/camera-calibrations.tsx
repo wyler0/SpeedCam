@@ -1,13 +1,17 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
 import React, { useState, useEffect, useCallback } from 'react';
+
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { TrashIcon } from "@/components/custom/icons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
-import { useCameraCalibrationService, CameraCalibration } from '@/services/cameraCalibrationService';
-import { CameraCalibrationAdd } from './camera-calibration-add';
-import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
+import { CameraCalibrationAdd } from './camera-calibration-add';
+
+import { useCameraCalibrationService, CameraCalibration } from '@/services/cameraCalibrationService';
 
 export function CameraCalibrations() {
   const [isAddCalibrationOpen, setIsAddCalibrationOpen] = useState(false);

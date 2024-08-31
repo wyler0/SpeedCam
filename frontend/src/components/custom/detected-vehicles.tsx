@@ -1,22 +1,26 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
 import React, { useEffect, useState, useMemo } from 'react';
+import { addDays, format } from 'date-fns';
+
+import { Cell, XAxis, ScatterChart, Scatter, YAxis, ZAxis, Tooltip, Legend } from "recharts"
+import { AlertTriangle } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ChartContainer } from "@/components/ui/chart"
-import { Cell, XAxis, ScatterChart, Scatter, YAxis, ZAxis, Tooltip, Legend } from "recharts"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertTriangle } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { addDays, format } from 'date-fns';
+
+import { EyeIcon, FilterIcon, CalendarIcon } from '@/components/custom/icons';
 
 import { Detection, Direction, PredefinedFilterType, VehicleDetectionFilters } from '@/services/vehicleDetectionService';
 import { SpeedCalibration } from '@/services/detectionStatusService';
-import { EyeIcon, FilterIcon, CalendarIcon } from '@/components/custom/icons';
 
 interface DetectedVehiclesProps {
   detections: Detection[];

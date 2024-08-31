@@ -1,6 +1,10 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
 import React from "react";
+
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+
 import { useCalibrationStatusService } from '@/services/detectionStatusCalibrationService';
 import { useCameraCalibrationService } from '@/services/cameraCalibrationService';
 

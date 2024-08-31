@@ -1,10 +1,8 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import os
-def get_root_directory() -> str:
-    """Get the root directory of the FastAPI application."""
-    return os.path.dirname(os.path.abspath(__file__))
 
-ROOT_DIR = get_root_directory()
-
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Upload data paths
 DATA_ROOT_DIR = os.path.join(ROOT_DIR, "data")

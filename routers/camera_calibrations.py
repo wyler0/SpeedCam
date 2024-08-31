@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 from typing import List, Optional
 from datetime import datetime
 from uuid import uuid4

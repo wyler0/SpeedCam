@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import time
 from threading import Thread
 from typing import Union

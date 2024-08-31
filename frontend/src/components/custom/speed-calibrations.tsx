@@ -1,14 +1,20 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
+
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { TrashIcon } from "@/components/custom/icons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+
+import { SpeedCalibrationAdd, SpeedCalibrationAddProps } from "./speed-calibration-add";
+
 import { useSpeedCalibrationService } from '@/services/speedCalibrationService';
 import { useCalibrationStatusService } from '@/services/detectionStatusCalibrationService';
-import { SpeedCalibrationAdd, SpeedCalibrationAddProps } from "./speed-calibration-add";
-import toast from 'react-hot-toast';
+
+import { TrashIcon } from "@/components/custom/icons";
 
 export function SpeedCalibrations({
   detections,

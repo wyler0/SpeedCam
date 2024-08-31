@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 # Import required modules
 import cv2
 import numpy as np

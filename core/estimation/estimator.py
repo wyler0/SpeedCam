@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import os
 import logging
 from typing import Literal, Optional, List, Tuple, Union

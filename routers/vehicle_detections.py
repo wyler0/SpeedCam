@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import os, shutil
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,17 +13,6 @@ import models, schemas
 from config import DETECTIONS_DATA_PATH
 
 router = APIRouter()
-
-# @router.post("/", response_model=schemas.VehicleDetection)
-# async def create_vehicle_detection(
-#     detection: schemas.VehicleDetectionCreate,
-#     db: Session = Depends(get_db)
-# ):
-#     db_detection = models.VehicleDetection(**detection.dict())
-#     db.add(db_detection)
-#     db.commit()
-#     db.refresh(db_detection)
-#     return db_detection
 
 @router.get("/", response_model=List[schemas.VehicleDetection])
 async def list_vehicle_detections(

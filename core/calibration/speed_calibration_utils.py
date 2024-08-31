@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import numpy as np
 
 from sqlalchemy.orm import Session

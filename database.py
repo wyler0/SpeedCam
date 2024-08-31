@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import os
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import sessionmaker

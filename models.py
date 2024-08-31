@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, Enum, Boolean

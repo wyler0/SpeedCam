@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Any, TYPE_CHECKING, ForwardRef
 from datetime import datetime

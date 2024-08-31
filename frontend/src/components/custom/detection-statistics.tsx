@@ -1,7 +1,11 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
 import React from 'react';
+
+import { AlertTriangle } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertTriangle } from "lucide-react"
+
 import { Detection, VehicleDetectionFilters } from '@/services/vehicleDetectionService';
 
 interface DetectionStatisticsProps {

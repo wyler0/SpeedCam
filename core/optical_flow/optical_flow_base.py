@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import numpy as np
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Any

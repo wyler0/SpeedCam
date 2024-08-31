@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 import os
 
 from AVFoundation import AVCaptureDevice

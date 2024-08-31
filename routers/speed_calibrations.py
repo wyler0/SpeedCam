@@ -1,3 +1,5 @@
+# © 2024 Wyler Zahm. All rights reserved.
+
 from typing import List
 import os, shutil
 

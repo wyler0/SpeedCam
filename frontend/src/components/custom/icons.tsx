@@ -1,3 +1,5 @@
+// © 2024 Wyler Zahm. All rights reserved.
+
 export function EyeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg

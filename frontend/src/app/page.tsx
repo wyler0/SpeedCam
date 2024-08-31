@@ -1,5 +1,8 @@
-import { SpeedCam } from "@/components/custom/speed-cam";
+// © 2024 Wyler Zahm. All rights reserved.
+
 import { Toaster } from 'react-hot-toast';
+
+import { SpeedCam } from "@/components/custom/speed-cam";
 
 
 export default function Home() {
