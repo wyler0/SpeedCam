@@ -11,3 +11,4 @@
 
 frontend/src/components/ui/*.tsx
 data/*
+package-lock.json
