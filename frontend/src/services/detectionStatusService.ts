@@ -1,54 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getEndpoint } from '@/api/endpoints';
 import toast from 'react-hot-toast';
+import { useSharedDetectionStatusService } from './sharedDetectionStatusService';
 
-interface DetectionStatus {
-  running: boolean;
-  speed_calibration_id: string | null;
-  camera_id: number | null;
-}
-
-interface CameraInfo {
-  id: string;
+export interface SpeedCalibration {
   name: string;
+  description: string;
+  camera_calibration_id: number;
+  calibration_date: string;
+  valid: boolean;
+  left_to_right_constant: number;
+  right_to_left_constant: number;
+  id: number;
+  vehicle_detections: number;
 }
+
 
 export function useDetectionStatusService() {
-  const [isDetectionOn, setIsDetectionOn] = useState(false);
+  const shared = useSharedDetectionStatusService();
   const [speedCalibrationId, setSpeedCalibrationId] = useState<string | null>(null);
-  const [calibrationIds, setCalibrationIds] = useState<string[]>([]);
-  const [availableCameras, setAvailableCameras] = useState<CameraInfo[]>([]);
-  const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
-
-  const fetchDetectionStatus = useCallback(async () => {
-    try {
-      const response = await fetch(getEndpoint('DETECTION_STATUS'));
-      const data: DetectionStatus = await response.json();
-      setIsDetectionOn(data.running);
-      setSpeedCalibrationId(data.speed_calibration_id);
-      setSelectedCamera(data.camera_id?.toString() || null);
-    } catch (error) {
-      console.error("Error fetching detection status:", error);
-    }
-  }, []);
-
-  const fetchAvailableCameras = useCallback(async () => {
-    try {
-      const response = await fetch(getEndpoint('AVAILABLE_CAMERAS'));
-      const data = await response.json();
-      if (typeof data === 'object' && data !== null) {
-        const cameras: CameraInfo[] = Object.entries(data.available_cameras).map(([id, name]) => ({
-          id,
-          name: name as string,
-        }));
-        setAvailableCameras(cameras);
-      } else {
-        console.error("Unexpected data format for available cameras:", data);
-      }
-    } catch (error) {
-      console.error("Error fetching available cameras:", error);
-    }
-  }, []);
+  const [calibrations, setCalibrations] = useState<SpeedCalibration[]>([]);
 
   const fetchCalibrationIds = useCallback(async () => {
     try {
@@ -57,7 +28,7 @@ export function useDetectionStatusService() {
       });
       const data = await response.json();
       if (Array.isArray(data)) {
-        setCalibrationIds(data);
+        setCalibrations(data);
       } else {
         console.error("Unexpected data format for calibration_ids:", data);
       }
@@ -66,20 +37,18 @@ export function useDetectionStatusService() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchDetectionStatus();
-    fetchCalibrationIds();
-    fetchAvailableCameras();
-
-    const intervalId = setInterval(fetchDetectionStatus, 5000);
-
-    return () => clearInterval(intervalId);
-  }, [fetchDetectionStatus, fetchCalibrationIds, fetchAvailableCameras]);
-
   const toggleDetection = async () => {
-    const newStatus = !isDetectionOn;
+    if (shared.processingVideo) {
+      toast.error('Cannot toggle detection while video is processing.', {
+        position: 'bottom-right',
+        duration: 4000,
+      });
+      return;
+    }
 
-    if (newStatus && (!speedCalibrationId || selectedCamera === null)) {
+    const newStatus = !shared.isDetectionOn;
+
+    if (newStatus && (!speedCalibrationId || shared.selectedCamera === null)) {
       toast.error('Please select both a calibration and a camera before starting detection.', {
         position: 'bottom-right',
         duration: 4000,
@@ -94,14 +63,14 @@ export function useDetectionStatusService() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ camera_id: selectedCamera }),
+        body: JSON.stringify({ camera_source: shared.selectedCamera }),
       });
 
       if (!response.ok) {
         throw new Error(`Failed to ${endpoint} detection`);
       }
 
-      await fetchDetectionStatus();
+      await shared.fetchDetectionStatus();
       
       toast.success(`Detection ${newStatus ? 'started' : 'stopped'} successfully`, {
         position: 'bottom-right',
@@ -130,7 +99,7 @@ export function useDetectionStatusService() {
         throw new Error('Failed to update speed calibration');
       }
 
-      await fetchDetectionStatus();
+      await shared.fetchDetectionStatus();
     } catch (error) {
       console.error('Error updating speed calibration:', error);
       setSpeedCalibrationId(null);
@@ -141,39 +110,12 @@ export function useDetectionStatusService() {
     }
   };
 
-  const updateSelectedCamera = async (id: string) => {
-    setSelectedCamera(id);
-    try {
-      const response = await fetch(`${getEndpoint('LIVE_DETECTION')}/update?camera_id=${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update selected camera');
-      }
-
-      await fetchDetectionStatus();
-    } catch (error) {
-      console.error('Error updating selected camera:', error);
-      setSelectedCamera(null);
-      toast.error('Failed to update selected camera. Please try again.', {
-        position: 'bottom-right',
-        duration: 4000,
-      });
-    }
-  };
-
   return {
-    isDetectionOn,
+    ...shared,
     speedCalibrationId,
-    calibrationIds,
-    availableCameras,
-    selectedCamera,
+    calibrations,
     toggleDetection,
     updateSpeedCalibration,
-    updateSelectedCamera,
+    fetchCalibrationIds,
   };
 }

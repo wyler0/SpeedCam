@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getEndpoint } from '@/api/endpoints';
 
 export enum Direction {
@@ -9,12 +9,13 @@ export enum Direction {
 export interface Detection {
   id: number;
   detection_date: string;
-  video_clip_path: string | null;
-  speed_calibration_id: number | null;
-  estimated_speed: number | null;
-  true_speed: number | null;
   direction: Direction | null;
-  confidence: number | null;
+  thumbnail_path: string | null;
+  pixel_speed_estimate: number | null;
+  real_world_speed_estimate: number | null;
+  real_world_speed: number | null;
+  speed_calibration_id: number | null;
+  //optical_flow_path: string | null;
   error: string | null;
 }
 
@@ -29,7 +30,7 @@ export const PredefinedFilters = {
 export type PredefinedFilterType = typeof PredefinedFilters[keyof typeof PredefinedFilters];
 
 export interface VehicleDetectionFilters {
-  speedCalibrationId?: number;
+  speed_calibration_id?: number;
   startDate?: string;
   endDate?: string;
   minSpeed?: number;
@@ -39,14 +40,15 @@ export interface VehicleDetectionFilters {
   predefinedFilter?: PredefinedFilterType;
 }
 
-export function useVehicleDetectionService(initialFilters: VehicleDetectionFilters = {}) {
+export function useVehicleDetectionService(initialFilters: VehicleDetectionFilters = {}, pollingInterval = 5000) {
   const [filters, setFilters] = useState<VehicleDetectionFilters>(initialFilters);
   const [detections, setDetections] = useState<Detection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchDetections = useCallback(async () => {
-    if (!filters.speedCalibrationId) {
+    if (!filters.speed_calibration_id) {
       setError("A speed calibration ID is required");
       return;
     }
@@ -66,7 +68,13 @@ export function useVehicleDetectionService(initialFilters: VehicleDetectionFilte
         throw new Error('Failed to fetch vehicle detections');
       }
       const data: Detection[] = await response.json();
-      setDetections(data);
+      setDetections(prevDetections => {
+        // Only update if the data has changed
+        if (JSON.stringify(prevDetections) !== JSON.stringify(data)) {
+          return data;
+        }
+        return prevDetections;
+      });
     } catch (error) {
       console.error('Error fetching vehicle detections:', error);
       setError(error instanceof Error ? error.message : 'An unknown error occurred');
@@ -75,20 +83,53 @@ export function useVehicleDetectionService(initialFilters: VehicleDetectionFilte
     }
   }, [filters]);
 
-  useEffect(() => {
-    if (filters.speedCalibrationId) {
-      fetchDetections();
+  const startPolling = useCallback(() => {
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
     }
-  }, [fetchDetections]);
+    
+    const poll = () => {
+      fetchDetections().then(() => {
+        pollingTimeoutRef.current = setTimeout(poll, pollingInterval);
+      });
+    };
+
+    poll();
+  }, [fetchDetections, pollingInterval]);
+
+  useEffect(() => {
+    if (filters.speed_calibration_id) {
+      fetchDetections();
+      startPolling();
+    } else {
+      setDetections([]);
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    }
+
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
+  }, [filters, fetchDetections, startPolling]);
 
   const updateFilters = useCallback((newFilters: Partial<VehicleDetectionFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   }, []);
 
+  // New effect to handle filter changes
+  useEffect(() => {
+    if (filters.speed_calibration_id) {
+      fetchDetections();
+    }
+  }, [filters, fetchDetections]);
+
   const getStatistics = () => {
     const vehiclesDetected = detections.length;
-    const averageSpeed = detections.reduce((sum, d) => d.estimated_speed !== null ? sum + d.estimated_speed : sum, 0) / detections.filter(d => d.estimated_speed !== null).length || 0;
-    const speedingViolations = detections.filter(d => d.estimated_speed !== null && d.estimated_speed > 30).length;
+    const averageSpeed = detections.reduce((sum, d) => d.real_world_speed_estimate !== null ? sum + d.real_world_speed_estimate : sum, 0) / detections.filter(d => d.real_world_speed_estimate !== null).length || 0;
+    const speedingViolations = detections.filter(d => d.real_world_speed_estimate !== null && d.real_world_speed_estimate > 30).length;
 
     return {
       vehiclesDetected,
@@ -97,5 +138,54 @@ export function useVehicleDetectionService(initialFilters: VehicleDetectionFilte
     };
   };
 
-  return { detections, loading, error, filters, updateFilters, getStatistics, PredefinedFilters };
+  const updateDetection = async (id: number, updates: Partial<Detection>) => {
+    try {
+      const response = await fetch(`${getEndpoint('VEHICLE_DETECTIONS')}/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update detection');
+      }
+
+      await fetchDetections();
+    } catch (error) {
+      console.error('Error updating detection:', error);
+      throw error;
+    }
+  };
+
+  const deleteDetection = async (id: number) => {
+    try {
+      const response = await fetch(`${getEndpoint('VEHICLE_DETECTIONS')}/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete detection');
+      }
+
+      await fetchDetections();
+    } catch (error) {
+      console.error('Error deleting detection:', error);
+      throw error;
+    }
+  };
+
+  return { 
+    detections, 
+    loading, 
+    error, 
+    filters, 
+    updateFilters, 
+    getStatistics, 
+    PredefinedFilters, 
+    updateDetection, 
+    deleteDetection, 
+    startPolling 
+  };
 }

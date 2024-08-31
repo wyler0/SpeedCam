@@ -22,6 +22,7 @@ type ImageStatus = 'loading' | 'success' | 'error' | null;
 interface CapturedImage {
   src: string;
   status: ImageStatus;
+  flipped: boolean;
 }
 
 export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCalibrationAddProps) {
@@ -35,11 +36,26 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
   const camera = useRef<CameraRef | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCameraFlipped, setIsCameraFlipped] = useState<boolean>(false);
+
+  const flipImage = async (imageSrc: string): Promise<string> => {
+    const response = await fetch(imageSrc);
+    const blob = await response.blob();
+    const imageBitmap = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = imageBitmap.width;
+    canvas.height = imageBitmap.height;
+    const ctx = canvas.getContext('2d');
+    ctx?.scale(-1, 1);
+    ctx?.drawImage(imageBitmap, -canvas.width, 0);
+    return canvas.toDataURL('image/jpeg');
+  };
 
   const handleCapture = async () => {
     if (camera.current && 'takePhoto' in camera.current) {
-      const photo = camera.current.takePhoto();
-      const newImage: CapturedImage = { src: photo, status: 'loading' };
+      let photo = camera.current.takePhoto();
+      
+      const newImage: CapturedImage = { src: photo, status: 'loading', flipped: isCameraFlipped };
       setCapturedImages(prev => [...prev, newImage]);
 
       try {
@@ -84,7 +100,13 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
     if (files) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const newImage: CapturedImage = { src: URL.createObjectURL(file), status: 'loading' };
+        let imageSrc = URL.createObjectURL(file);
+        
+        if (isCameraFlipped) {
+          imageSrc = await flipImage(imageSrc);
+        }
+
+        const newImage: CapturedImage = { src: imageSrc, status: 'loading', flipped: isCameraFlipped };
         setCapturedImages(prev => [...prev, newImage]);
 
         try {
@@ -141,6 +163,18 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
     setIsCapturing(!isCapturing);
   };
 
+  const handleFlipToggle = async (isFlipped: boolean) => {
+    setIsCameraFlipped(isFlipped);
+    const updatedImages = await Promise.all(capturedImages.map(async (img) => {
+      if (img.flipped !== isFlipped) {
+        const flippedSrc = await flipImage(img.src);
+        return { ...img, src: flippedSrc, flipped: isFlipped };
+      }
+      return img;
+    }));
+    setCapturedImages(updatedImages);
+  };
+
   const handleSubmit = async () => {
     // Validate form
     if (!cameraName.trim()) {
@@ -166,6 +200,7 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
         camera_name: cameraName,
         rows: rows,
         cols: columns,
+        horizontal_flip: isCameraFlipped, // Include the flip information
       };
 
       const createResponse = await fetch(getEndpoint('CAMERA_CALIBRATIONS'), {
@@ -284,6 +319,15 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
             max={10}
           />
         </div>
+        <div className="flex items-center gap-4">
+          <label htmlFor="flip-camera" className="flex-none">Flip Camera:</label>
+          <input
+            type="checkbox"
+            id="flip-camera"
+            checked={isCameraFlipped}
+            onChange={(e) => handleFlipToggle(e.target.checked)}
+          />
+        </div>
         <div className="flex justify-between items-center">
           <Button onClick={toggleCaptureMethod}>
             {isCapturing ? 'Switch to Upload' : 'Switch to Capture'}
@@ -305,18 +349,20 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
 
         {isCapturing ? (
           <div className="relative w-full aspect-video bg-muted rounded-md overflow-hidden">
-            <Camera 
-              ref={camera} 
-              facingMode={cameraType} 
-              aspectRatio={16 / 9} 
-              errorMessages={{
-                noCameraAccessible: 'No camera device accessible. Please connect your camera or try a different browser.',
-                permissionDenied: 'Permission denied. Please refresh and give camera permission.',
-                switchCamera:
-                  'It is not possible to switch camera to different one because there is only one video device accessible.',
-                canvas: 'Canvas is not supported.',
-              }}
-            />
+            <div style={{ transform: isCameraFlipped ? 'scaleX(-1)' : 'none' }}>
+              <Camera 
+                ref={camera} 
+                facingMode={cameraType} 
+                aspectRatio={16 / 9} 
+                errorMessages={{
+                  noCameraAccessible: 'No camera device accessible. Please connect your camera or try a different browser.',
+                  permissionDenied: 'Permission denied. Please refresh and give camera permission.',
+                  switchCamera:
+                    'It is not possible to switch camera to different one because there is only one video device accessible.',
+                  canvas: 'Canvas is not supported.',
+                }}
+              />
+            </div>
             <div className="absolute bottom-4 right-4">
               <Button onClick={handleCapture} disabled={rows === 0 || columns === 0}>Capture</Button>
             </div>
@@ -335,7 +381,11 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
                   src={img.src}
                   alt={`Captured Image ${index + 1}`}
                   className={`rounded-md w-full h-auto ${img.status === 'error' ? 'opacity-50' : ''}`}
-                  style={{ aspectRatio: "4/3", objectFit: "cover" }}
+                  style={{ 
+                    aspectRatio: "4/3", 
+                    objectFit: "cover", 
+                    transform: img.flipped ? 'scaleX(-1)' : 'none' 
+                  }}
                 />
                 <div className="absolute top-1 right-1 flex gap-1">
                   {renderImageStatus(img.status)}

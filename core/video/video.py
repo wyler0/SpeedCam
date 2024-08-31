@@ -123,7 +123,7 @@ class VideoStream:
         
         if self.frames_read-self.proc_fps_info['prev_frames_read'] > 60: self.update_proc_fps()
         
-        return self.frame
+        return self.frame, self.frames_read
 
     def stop(self):
         """indicate that the thread should be stopped"""

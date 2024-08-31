@@ -1,5 +1,6 @@
 // Base URL for the API
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+export const BASE_URL = 'http://localhost:8000';
+export const API_BASE_URL = `${BASE_URL}/api/v1`;
 
 // API endpoints
 export const API_ENDPOINTS = {
@@ -10,16 +11,21 @@ export const API_ENDPOINTS = {
 
   // Vehicle detections
   VEHICLE_DETECTIONS: `${API_BASE_URL}/vehicle-detections`,
-
+  
   // Speed calibrations
   SPEED_CALIBRATIONS: `${API_BASE_URL}/speed-calibrations`,
-
+  SPEED_CALIBRATIONS_SUBMIT: `${API_BASE_URL}/speed-calibrations/{calibration_id}/submit`,
+  SPEED_CALIBRATIONS_UPDATE: `${API_BASE_URL}/speed-calibrations/{calibration_id}`,
+  
   // Live detection
   LIVE_DETECTION: `${API_BASE_URL}/live-detection`,
   AVAILABLE_CAMERAS: `${API_BASE_URL}/live-detection/available_cameras`,
   START_DETECTION: `${API_BASE_URL}/live-detection/start`,
   STOP_DETECTION: `${API_BASE_URL}/live-detection/stop`,
   DETECTION_STATUS: `${API_BASE_URL}/live-detection/status`,
+  LATEST_IMAGE_STATUS: `${API_BASE_URL}/live-detection/latest_image_status`,
+  LATEST_IMAGE_URL: `${BASE_URL}/static/latest_detection_image.png`,
+  UPLOAD_SPEED_CALIBRATION_VIDEO: `${API_BASE_URL}/live-detection/{calibration_id}/upload-video`,
 
   // Validate calibration image
   VALIDATE_CALIBRATION_IMAGE: `${API_BASE_URL}/camera-calibrations/validate`,

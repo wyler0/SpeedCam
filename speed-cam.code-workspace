@@ -5,12 +5,10 @@
 		},
 		{
 			"path": "../SpeedCam/speed-camera-v2"
-		},
-		{
-			"path": "../SpeedCam/speed-camera-optical-flow"
 		}
 	],
-	"settings": {},
+	"settings": {
+	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [
@@ -23,6 +21,17 @@
 				"main:app",
 				"--reload"
 			],
+			"console": "integratedTerminal"
+		},
+		{
+			"type": "python",
+			"request": "launch",
+			"name": "Run Speed Estimator Tests",
+			"env": {
+				"PYTHONPATH": "${workspaceFolder:speed-cam}"
+			},
+			"cwd": "${workspaceFolder:speed-cam}",
+			"program": "core/estimation/test.py",
 			"console": "integratedTerminal"
 		}
 		]

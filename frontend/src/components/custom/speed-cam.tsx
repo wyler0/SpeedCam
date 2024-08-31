@@ -34,6 +34,7 @@ import { DetectionStatusToggle } from "@/components/custom/detection-status"
 import { DetectedVehicles } from "@/components/custom/detected-vehicles"
 import { SpeedCalibrations } from "@/components/custom/speed-calibrations"
 import { CameraCalibrations } from "@/components/custom/camera-calibrations"
+import { LatestDetectionImage } from "@/components/custom/latest-detection-image"
 
 export function SpeedCam() {
   
@@ -75,6 +76,10 @@ export function SpeedCam() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Real-Time Detection</h2>
               <DetectionStatusToggle />
+            </div>
+            <div className="grid gap-6 mt-6">
+
+              <LatestDetectionImage />
             </div>
             <div className="grid gap-6 mt-6">
               <DetectionStatistics />

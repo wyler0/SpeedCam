@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
@@ -22,24 +22,36 @@ import { format } from 'date-fns';
 
 export function DetectedVehicles() {
   const { detections, loading, error, filters, updateFilters, PredefinedFilters } = useVehicleDetectionService();
-  const { speedCalibrationId, calibrationIds } = useDetectionStatusService();
+  const { speedCalibrationId, calibrations, fetchCalibrationIds } = useDetectionStatusService();
   const [tempFilters, setTempFilters] = useState<VehicleDetectionFilters>({});
   const [isOpen, setIsOpen] = useState(false);
-  const [isPredefinedFilterOpen, setIsPredefinedFilterOpen] = useState(false);
 
+  // Add this memoized value
+  const memoizedDetections = useMemo(() => detections, [detections]);
+
+  // Add a console log to debug
   useEffect(() => {
     if (speedCalibrationId) {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
+
       updateFilters({
-        speedCalibrationId: parseInt(speedCalibrationId),
+        speed_calibration_id: parseInt(speedCalibrationId),
         startDate: sevenDaysAgo.toISOString(),
         endDate: new Date().toISOString(),
         predefinedFilter: 'LAST_7_DAYS'
       });
     }
-  }, [speedCalibrationId, updateFilters]);
+    else {
+      fetchCalibrationIds();
+      updateFilters({
+        speed_calibration_id: undefined,
+        startDate: undefined,
+        endDate: undefined,
+        predefinedFilter: undefined
+      });
+    }
+  }, [speedCalibrationId, updateFilters, fetchCalibrationIds]);
 
   useEffect(() => {
     setTempFilters(filters);
@@ -92,7 +104,6 @@ export function DetectedVehicles() {
           }
         }
       }
-      
       return newFilters;
     });
   };
@@ -119,8 +130,8 @@ export function DetectedVehicles() {
           <div className="flex items-center justify-between mb-2">
             {/* Active filters */}
             <div className="flex-grow flex flex-wrap gap-2">
-              <span key='speedCalibrationId' className={`bg-gray-100 text-gray-800 text-sm font-medium px-2.5 py-0.5 rounded`}>
-                Calibration: {filters.speedCalibrationId || 'Not Selected'}
+              <span key='camera_calibration_id' className={`bg-gray-100 text-gray-800 text-sm font-medium px-2.5 py-0.5 rounded`}>
+                Calibration: {filters.speed_calibration_id || 'Not Selected'}
               </span>
               {Object.entries(filters).map(([key, value]) => {
                 if (value !== undefined && value !== '') {
@@ -129,7 +140,7 @@ export function DetectedVehicles() {
                   let textColor = 'text-gray-800';
 
                   switch (key) {
-                    case 'speedCalibrationId':
+                    case 'speed_calibration_id':
                       break;
                     case 'startDate':
                       label = `From: ${format(new Date(value), 'PP')}`;
@@ -169,17 +180,23 @@ export function DetectedVehicles() {
                 <DropdownMenuContent align="end" className="w-80 max-h-[80vh] overflow-y-auto">
                   <DropdownMenuLabel>Filter by:</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  
                   {/* Speed Calibration ID */}
                   <div className="p-2">
-                    <Label htmlFor="speedCalibrationId">Speed Calibration ID</Label>
-                    <Select onValueChange={(value) => handleFilterChange('speedCalibrationId', parseInt(value))}>
-                      <SelectTrigger id="speedCalibrationId">
+                    <Label htmlFor="speed_calibration_id">Speed Calibration ID</Label>
+                    <Select onValueChange={(value) => handleFilterChange('speed_calibration_id', parseInt(value))}>
+                      <SelectTrigger id="speed_calibration_id">
                         <SelectValue placeholder="Select calibration ID" />
                       </SelectTrigger>
                       <SelectContent>
-                        {calibrationIds.map((id) => (
-                          <SelectItem key={id} value={id.toString()}>{id}</SelectItem>
-                        ))}
+
+                      {calibrations.filter(calibration => calibration.valid).length > 0 ? (
+                          calibrations.filter(calibration => calibration.valid).map((calibration) => (
+                            <SelectItem key={calibration.id} value={calibration.id.toString()}>{calibration.name}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem disabled value="No valid speed calibrations available">No valid speed calibrations available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -275,10 +292,10 @@ export function DetectedVehicles() {
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 mt-4">
-          {speedCalibrationId ? (
+          {filters.speed_calibration_id != null ? (
             <Card>
               <CardContent className="p-0">
-                <ScatterPlotChart data={detections} />
+                <ScatterPlotChart data={memoizedDetections} />
               </CardContent>
             </Card>
           ) : (
@@ -289,7 +306,7 @@ export function DetectedVehicles() {
               </AlertDescription>
             </Alert>
           )}
-          {speedCalibrationId ? (
+          {filters.speed_calibration_id != null ? (
             <Card>
               <CardHeader>
                 <CardTitle>Detected Vehicles Table</CardTitle>
@@ -321,7 +338,7 @@ export function DetectedVehicles() {
                           <TableRow key={detection.id}>
                             <TableCell>{detection.detection_date}</TableCell>
                             <TableCell>{detection.speed_calibration_id}</TableCell>
-                            <TableCell>{detection.estimated_speed} mph</TableCell>
+                            <TableCell>{detection.real_world_speed_estimate} mph</TableCell>
                             <TableCell>{detection.direction}</TableCell>
                             <TableCell>
                               <Button variant="ghost" size="icon" className="rounded-full">
@@ -368,11 +385,11 @@ function ScatterPlotChart({ data }: { data: Detection[] }) {
     },
   };
 
-  const formattedData = data.map(d => ({
+  const formattedData = useMemo(() => data.map(d => ({
     time: new Date(d.detection_date).toLocaleTimeString(),
-    speed: d.estimated_speed,
+    speed: d.real_world_speed_estimate,
     direction: d.direction
-  }));
+  })).filter(d => d.speed !== null), [data]);
 
   return (
     <div className="w-full">

@@ -19,9 +19,6 @@ from core.calibration.camera_calibration_utils import find_corners, get_calibrat
 
 router = APIRouter()
 
-router.mount("/images", StaticFiles(directory=CALIBRATION_DATA_PATH, html = False), name="camera-calibration")
-
-
 @router.post("/", response_model=schemas.CameraCalibration)
 async def create_camera_calibration(
     calibration: schemas.CameraCalibrationCreate,

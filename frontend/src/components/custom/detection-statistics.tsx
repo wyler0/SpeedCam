@@ -15,7 +15,7 @@ export function DetectionStatistics() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
       updateFilters({
-        speedCalibrationId: parseInt(speedCalibrationId),
+        speed_calibration_id: parseInt(speedCalibrationId),
         startDate: sevenDaysAgo.toISOString(),
         endDate: new Date().toISOString(),
         predefinedFilter: 'LAST_7_DAYS'
