@@ -1,8 +1,8 @@
-"""Update Camera Calibration
+"""Create
 
-Revision ID: 92acd2926891
+Revision ID: 8f2a69bea15b
 Revises: 
-Create Date: 2024-08-13 12:38:18.482061
+Create Date: 2024-08-31 11:04:32.257854
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '92acd2926891'
+revision: str = '8f2a69bea15b'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -31,15 +31,21 @@ def upgrade() -> None:
     sa.Column('distortion_coefficients', sa.JSON(), nullable=True),
     sa.Column('rotation_matrix', sa.JSON(), nullable=True),
     sa.Column('translation_vector', sa.JSON(), nullable=True),
+    sa.Column('horizontal_flip', sa.Boolean(), nullable=False),
     sa.Column('valid', sa.Boolean(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('live_detection_state',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('camera_source', sa.Integer(), nullable=True),
+    sa.Column('is_calibrating', sa.Boolean(), nullable=True),
     sa.Column('speed_calibration_id', sa.Integer(), nullable=True),
     sa.Column('started_at', sa.DateTime(), nullable=True),
     sa.Column('running', sa.Boolean(), nullable=True),
     sa.Column('error', sa.String(), nullable=True),
+    sa.Column('has_new_image', sa.Boolean(), nullable=True),
+    sa.Column('video_path', sa.String(), nullable=True),
+    sa.Column('processing_video', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('speed_calibrations',
@@ -48,21 +54,25 @@ def upgrade() -> None:
     sa.Column('description', sa.String(), nullable=True),
     sa.Column('calibration_date', sa.DateTime(), nullable=False),
     sa.Column('camera_calibration_id', sa.Integer(), nullable=True),
+    sa.Column('valid', sa.Boolean(), nullable=False),
+    sa.Column('left_to_right_constant', sa.Float(), nullable=True),
+    sa.Column('right_to_left_constant', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['camera_calibration_id'], ['camera_calibrations.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('vehicle_detections',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('detection_date', sa.DateTime(), nullable=False),
-    sa.Column('video_clip_path', sa.String(), nullable=True),
+    sa.Column('thumbnail_path', sa.String(), nullable=True),
     sa.Column('direction', sa.Enum('LEFT_TO_RIGHT', 'RIGHT_TO_LEFT', name='vehicledirection'), nullable=True),
-    sa.Column('estimated_speed', sa.Float(), nullable=True),
+    sa.Column('pixel_speed_estimate', sa.Float(), nullable=True),
+    sa.Column('real_world_speed_estimate', sa.Float(), nullable=True),
+    sa.Column('real_world_speed', sa.Float(), nullable=True),
     sa.Column('confidence', sa.Float(), nullable=True),
-    sa.Column('true_speed', sa.Float(), nullable=True),
     sa.Column('optical_flow_path', sa.String(), nullable=True),
     sa.Column('speed_calibration_id', sa.Integer(), nullable=False),
     sa.Column('error', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['speed_calibration_id'], ['speed_calibrations.id'], ),
+    sa.ForeignKeyConstraint(['speed_calibration_id'], ['speed_calibrations.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
