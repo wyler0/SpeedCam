@@ -25,7 +25,7 @@ app = FastAPI(title="Vehicle Tracking System API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Adjust this to your frontend's URL
+    allow_origins=["http://127.0.0.1:3000"],  # Adjust this to your frontend's URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
