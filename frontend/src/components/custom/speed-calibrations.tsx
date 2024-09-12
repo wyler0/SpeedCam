@@ -112,11 +112,6 @@ export function SpeedCalibrations({
                     <CardTitle>{calibration.title}</CardTitle>
                     <CardDescription>{calibration.description}</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <video className="rounded-lg object-cover w-full aspect-video" controls>
-                      <source src={calibration.videoUrl} type="video/mp4" />
-                    </video>
-                  </CardContent>
                   <CardFooter className="flex items-center justify-between">
                     <Button variant="outline" size="sm" onClick={() => handleUpdateCalibration(calibration.id)}>
                       Update

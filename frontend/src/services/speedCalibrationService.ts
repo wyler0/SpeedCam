@@ -5,7 +5,6 @@ export interface SpeedCalibration {
   id: number;
   title: string;
   description: string;
-  videoUrl: string;
 }
 
 export function useSpeedCalibrationService() {
