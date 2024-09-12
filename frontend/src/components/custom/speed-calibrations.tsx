@@ -109,7 +109,7 @@ export function SpeedCalibrations({
               {calibrations.map((calibration) => (
                 <Card key={calibration.id}>
                   <CardHeader>
-                    <CardTitle>{calibration.title}</CardTitle>
+                    <CardTitle>{calibration.name}</CardTitle>
                     <CardDescription>{calibration.description}</CardDescription>
                   </CardHeader>
                   <CardFooter className="flex items-center justify-between">

@@ -48,10 +48,8 @@ export function DetectedVehicles({
   const [tempFilters, setTempFilters] = useState<VehicleDetectionFilters>({});
   const [isOpen, setIsOpen] = useState(false);
 
-  // Add this memoized value
   const memoizedDetections = useMemo(() => detections, [detections]);
 
-  // Add a console log to debug
   useEffect(() => {
     if (speedCalibrationId) {
       const sevenDaysAgo = new Date();
@@ -153,7 +151,7 @@ export function DetectedVehicles({
             {/* Active filters */}
             <div className="flex-grow flex flex-wrap gap-2">
               <span key='camera_calibration_id' className={`bg-gray-100 text-gray-800 text-sm font-medium px-2.5 py-0.5 rounded`}>
-                Calibration: {filters.speed_calibration_id || 'Not Selected'}
+                Calibration: {filters.speed_calibration_id ? calibrations.find(c => c.id === filters.speed_calibration_id)?.name : 'Not Selected'}
               </span>
               {Object.entries(filters).map(([key, value]) => {
                 if (value !== undefined && value !== '') {

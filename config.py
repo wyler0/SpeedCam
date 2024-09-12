@@ -12,5 +12,5 @@ DETECTIONS_DATA_PATH = os.path.join(DATA_ROOT_DIR, "detections_data")
 LATEST_DETECTION_IMAGE_PATH = os.path.join(DATA_ROOT_DIR, "latest_detection_image.png")
 VIDEO_DATA_PATH = os.path.join(DATA_ROOT_DIR, "video_data")
 
-
-
+# Speed limit in mph
+SPEED_LIMIT_MPH = 35

@@ -40,7 +40,7 @@ export interface VehicleDetectionFilters {
   predefinedFilter?: PredefinedFilterType;
 }
 
-export function useVehicleDetectionService(initialFilters: VehicleDetectionFilters = {}, pollingInterval = 5000) {
+export function useVehicleDetectionService(initialFilters: VehicleDetectionFilters = {}, pollingInterval = 5000, speedLimit: number) {
   const [filters, setFilters] = useState<VehicleDetectionFilters>(initialFilters);
   const [detections, setDetections] = useState<Detection[]>([]);
   const [loading, setLoading] = useState(false);
@@ -126,17 +126,17 @@ export function useVehicleDetectionService(initialFilters: VehicleDetectionFilte
     }
   }, [filters, fetchDetections]);
 
-  const getStatistics = () => {
-    const vehiclesDetected = detections.length;
+  const getStatistics = useCallback(() => {
+    const vehiclesDetected = detections.filter(d => d.real_world_speed_estimate !== null).length;
     const averageSpeed = detections.reduce((sum, d) => d.real_world_speed_estimate !== null ? sum + d.real_world_speed_estimate : sum, 0) / detections.filter(d => d.real_world_speed_estimate !== null).length || 0;
-    const speedingViolations = detections.filter(d => d.real_world_speed_estimate !== null && d.real_world_speed_estimate > 30).length;
+    const speedingViolations = detections.filter(d => d.real_world_speed_estimate !== null && d.real_world_speed_estimate > speedLimit).length;
 
     return {
       vehiclesDetected,
       averageSpeed,
       speedingViolations,
     };
-  };
+  }, [detections, speedLimit]);
 
   const updateDetection = async (id: number, updates: Partial<Detection>) => {
     try {

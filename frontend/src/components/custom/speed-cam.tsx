@@ -2,6 +2,7 @@
 
 'use client'
 import Link from "next/link"
+import { useState } from "react";
 import { DetectionStatistics } from "@/components/custom/detection-statistics"
 import { DetectionStatusToggle } from "@/components/custom/detection-status"
 import { DetectedVehicles } from "@/components/custom/detected-vehicles"
@@ -19,6 +20,8 @@ export function SpeedCam() {
 
   // Setup the state for the SpeedCam component
 
+  const [speedLimit, setSpeedLimit] = useState(35); // Default speed limit
+
   const {
     detections, 
     loading, 
@@ -29,7 +32,7 @@ export function SpeedCam() {
     PredefinedFilters, 
     updateDetection, 
     deleteDetection, 
-  } = useVehicleDetectionService();
+  } = useVehicleDetectionService({}, 5000, speedLimit); // Pass speedLimit to useVehicleDetectionService
 
   const {
     isDetectionOn,
@@ -54,6 +57,10 @@ export function SpeedCam() {
       const offsetPosition = elementPosition + window.scrollY - headerOffset; 
       window.scrollTo({ top: offsetPosition, behavior: 'smooth' }); 
     }
+  };
+
+  const handleSpeedLimitChange = (newSpeedLimit: number) => {
+    setSpeedLimit(newSpeedLimit);
   };
 
   return (
@@ -92,10 +99,11 @@ export function SpeedCam() {
                 toggleDetection={toggleDetection}
                 updateSpeedCalibration={updateSpeedCalibration}
                 updateSelectedCamera={updateSelectedCamera}
+                initialSpeedLimit={speedLimit}
+                onSpeedLimitChange={handleSpeedLimitChange}
               />
             </div>
             <div className="grid gap-6 mt-6">
-
               <LatestDetectionImage />
             </div>
             <div className="grid gap-6 mt-6">
@@ -107,6 +115,7 @@ export function SpeedCam() {
                 updateFilters={updateFilters}
                 getStatistics={getStatistics}
                 speedCalibrationId={speedCalibrationId}
+                speedLimit={speedLimit}
               />
             </div>
           </section>

@@ -73,6 +73,7 @@ app.include_router(live_detection_router, prefix="/api/v1/live-detection", tags=
 static_dir = os.path.abspath("data/detections_data")
 app.mount("/detections", StaticFiles(directory=static_dir), name="detections")
 
+# List vehicle images
 @app.get("/detection/{calibration_date}/vehicles/{vehicle_id}/images", response_model=List[str])
 async def list_vehicle_images(
     calibration_date: str,
@@ -93,6 +94,17 @@ async def list_vehicle_images(
     image_urls = [f"{base_url}/{image}" for image in image_files]
     
     return image_urls
+
+
+# Set, get vehicle speed limit
+@app.post("/api/v1/speed-calibrations/speed-limit")
+async def set_speed_limit(speed_limit: int):
+    config.SPEED_LIMIT_MPH = speed_limit
+    return {"message": f"Speed limit set to {speed_limit} mph"}
+
+@app.get("/api/v1/speed-calibrations/speed-limit")
+async def get_speed_limit():
+    return {"speed_limit": config.SPEED_LIMIT_MPH}
 
 # Run the app
 if __name__ == "__main__":

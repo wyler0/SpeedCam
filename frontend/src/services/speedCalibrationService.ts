@@ -3,7 +3,7 @@ import { getEndpoint } from '@/api/endpoints';
 
 export interface SpeedCalibration {
   id: number;
-  title: string;
+  name: string;
   description: string;
 }
 

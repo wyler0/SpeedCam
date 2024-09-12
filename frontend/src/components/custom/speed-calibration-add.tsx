@@ -15,11 +15,10 @@ import { Label } from "@/components/ui/label"
 
 import { LatestDetectionImage } from "@/components/custom/latest-detection-image"
 import { DetectionStatusCalibrationToggle } from "@/components/custom/detection-status-calibration"
-
 import { useCalibrationStatusService } from '@/services/detectionStatusCalibrationService'
 import { Direction, Detection, VehicleDetectionFilters } from '@/services/vehicleDetectionService'
-import { BASE_URL } from '@/api/endpoints'
 
+import { BASE_URL } from '@/api/endpoints'
 
 export interface SpeedCalibrationAddProps {
   detections: Detection[];

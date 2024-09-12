@@ -17,6 +17,9 @@ export const API_ENDPOINTS = {
   SPEED_CALIBRATIONS_SUBMIT: `${API_BASE_URL}/speed-calibrations/{calibration_id}/submit`,
   SPEED_CALIBRATIONS_UPDATE: `${API_BASE_URL}/speed-calibrations/{calibration_id}`,
   
+  // Speed limit
+  SPEED_LIMIT: `${API_BASE_URL}/speed-calibrations/speed-limit`,
+  
   // Live detection
   LIVE_DETECTION: `${API_BASE_URL}/live-detection`,
   AVAILABLE_CAMERAS: `${API_BASE_URL}/live-detection/available_cameras`,
