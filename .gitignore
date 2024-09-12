@@ -9,6 +9,6 @@
 **/__pycache__/**
 *.db
 
-frontend/src/components/ui/*.tsx
 data/*
 package-lock.json
+frontend/venv
