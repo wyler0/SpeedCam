@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from database import get_default_session_factory
 from models import LiveDetectionState
+import config
 
 from routers import (
     camera_calibrations_router,
@@ -25,11 +26,16 @@ app = FastAPI(title="Vehicle Tracking System API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000"],  # Adjust this to your frontend's URL
+    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],  # Adjust this to your frontend's URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Create directories if they don't exist
+for path in [config.DETECTIONS_DATA_PATH, config.CALIBRATION_DATA_PATH, config.VIDEO_DATA_PATH, config.LATEST_DETECTION_IMAGE_PATH, config.UPLOADS_DIR]:
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 # Serve the frontend
 @app.get("/", tags=["index"])
