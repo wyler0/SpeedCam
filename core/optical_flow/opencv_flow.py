@@ -18,7 +18,7 @@ class OpenCVOpticalFlowParams(BaseModel):
     poly_sigma: float = 1.2
     flags: int = 0
     
-    MIN_FLOW_MAGNITUDE: float = 5 # Minimum magnitude of flow to be considered. Dependent on vehicle speed, flow compute params, etc.
+    MIN_FLOW_MAGNITUDE: float = 4 # Minimum magnitude of flow to be considered. Dependent on vehicle speed, flow compute params, etc.
     MIN_DISTANCE_BETWEEN_GROUPS: float = 150 # Minimum distance between groups to be considered separate events.
     MAX_DISTANCE_FROM_CENTER: float = 400 # Maximum distance from center to form an event. Related to vehicle size.
     MIN_FLOW_COUNT: int = 20 # Minimum number of flows to form an event.
@@ -68,7 +68,7 @@ class OpenCVOpticalFlowDetector(OpticalFlowDetector):
     
     def group_flows(self, flows: List[np.ndarray]) -> List[List[np.ndarray]]:
         """
-        Group flows into event groups.
+        Group flows into event groups, ensuring flows in different directions are never grouped together.
         """
         final_groups = []
         for frame_flows in flows:
@@ -80,36 +80,38 @@ class OpenCVOpticalFlowDetector(OpticalFlowDetector):
             significant_flows = frame_flows[magnitudes > self.params.MIN_FLOW_MAGNITUDE]
             
             if len(significant_flows) > 0:
-                # 2. Direction-based clustering (reduced to 4 bins)
-                angles = np.arctan2(significant_flows[:, 3], significant_flows[:, 2])
-                angle_bins = np.digitize(angles, bins=np.linspace(-np.pi, np.pi, 4))
+                # 2. Direction-based separation (left vs right)
+                left_flows = significant_flows[significant_flows[:, 2] < 0]
+                right_flows = significant_flows[significant_flows[:, 2] >= 0]
                 
-                for bin in range(1, 5):  # Adjusted range
-                    bin_flows = significant_flows[angle_bins == bin]
-                    if len(bin_flows) > self.params.MIN_FLOW_COUNT:
+                for direction_flows in [left_flows, right_flows]:
+                    if len(direction_flows) > self.params.MIN_FLOW_COUNT:
                         # 3. Spatial proximity clustering
-                        center = np.mean(bin_flows[:, :2], axis=0)
-                        distances = np.linalg.norm(bin_flows[:, :2] - center, axis=1)
-                        close_flows = bin_flows[distances < self.params.MAX_DISTANCE_FROM_CENTER]
-                        
-                        if len(close_flows) > self.params.MIN_FLOW_COUNT:
-                            # 4. Check for overlap with existing groups
-                            merged = False
-                            for existing_group in groups:
-                                existing_center = np.mean(existing_group[:, :2], axis=0)
-                                distance = np.linalg.norm(center - existing_center)
-                                if distance < self.params.MIN_DISTANCE_BETWEEN_GROUPS:
-                                    # Merge with existing group
-                                    existing_group = np.vstack([existing_group, close_flows])
-                                    merged = True
-                                    break
-                            
-                            if not merged:
-                                groups.append(close_flows)
+                        clusters = self.cluster_by_proximity(direction_flows)
+                        groups.extend(clusters)
             
             final_groups.append(groups)
         
         return final_groups
+    
+    def cluster_by_proximity(self, flows: np.ndarray) -> List[np.ndarray]:
+        """
+        Cluster flows based on spatial proximity.
+        """
+        clusters = []
+        remaining_flows = flows.copy()
+        
+        while len(remaining_flows) > 0:
+            center = remaining_flows[0, :2]
+            distances = np.linalg.norm(remaining_flows[:, :2] - center, axis=1)
+            close_flows = remaining_flows[distances < self.params.MAX_DISTANCE_FROM_CENTER]
+            
+            if len(close_flows) > self.params.MIN_FLOW_COUNT:
+                clusters.append(close_flows)
+            
+            remaining_flows = remaining_flows[distances >= self.params.MAX_DISTANCE_FROM_CENTER]
+        
+        return clusters
     
     def visualize_flow_groups(self, flow_groups: List[List[np.ndarray]], frames: List[np.ndarray], output_path: str = None, opacity: float = 0.3) -> List[str]:
         """

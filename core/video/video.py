@@ -67,9 +67,9 @@ class VideoStream:
         self.stream.set(cv2.CAP_PROP_POS_MSEC, offset_ms)
         _, _ = self.stream.read()
         
-    def get_time_ms(self):
+    def get_time_sec(self):
         """ Get current time in clip in ms. """
-        if type(self.video_source) == str: return self.stream.get(cv2.CAP_PROP_POS_MSEC) 
+        if type(self.video_source) == str: return self.stream.get(cv2.CAP_PROP_POS_MSEC)/1000
         else: return time.time() - self.start_time
         
     def update_proc_fps(self):

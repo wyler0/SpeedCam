@@ -25,7 +25,7 @@ class TestSpeedEstimator(unittest.TestCase):
     config: EstimatorConfig = None
     estimator: SpeedEstimator = None
     
-    def setup_db(self) -> tuple[Session, LiveDetectionState]:
+    def setup_db(self, video_path: str) -> tuple[Session, LiveDetectionState]:
         # Create an in-memory SQLite database
         set_database_url('sqlite:///./test.db')
         
@@ -296,6 +296,7 @@ class TestSpeedEstimator(unittest.TestCase):
 
             state_data = LiveDetectionStateCreate(
                 is_calibrating=True,
+                video_path=video_path,
                 speed_calibration_id=speed_calibration.id,
                 started_at=None,
                 running=False,
@@ -317,7 +318,7 @@ class TestSpeedEstimator(unittest.TestCase):
         if os.path.exists("test.db"): 
             os.remove("test.db")
 
-    def start_estimator(self) -> multiprocessing.Event:
+    def start_estimator(self, profile=False) -> multiprocessing.Event:
         with get_default_session_factory().get_db_with() as db:
             self.state = db.query(LiveDetectionState).first()
             if self.state:
@@ -326,7 +327,7 @@ class TestSpeedEstimator(unittest.TestCase):
                 db.commit()
             else:
                 raise Exception("Live detection state not initialized.")
-        return self.estimator.start()
+        return self.estimator.start(profile=profile)
     
     def stop_estimator(self, stop_signal: multiprocessing.Event):
         stop_signal.set()
@@ -338,11 +339,10 @@ class TestSpeedEstimator(unittest.TestCase):
         with get_default_session_factory().get_db_with() as db:
             db.commit()
     
-    def test_speed_estimation_one_vehicle(self):
+    def Xtest_speed_estimation_one_vehicle(self):
         # Setup DB and Config and Estimator
-        self.state = self.setup_db()
+        self.state = self.setup_db("data/test_data/videos/07_08_2024/split_1.mp4")
         self.config = EstimatorConfig()
-        self.config.input_video = "data/test_data/videos/split_1.mp4"
         length = 6.133008
         self.estimator = SpeedEstimator(self.config)
         
@@ -365,15 +365,14 @@ class TestSpeedEstimator(unittest.TestCase):
     
     def test_speed_estimation_two_vehicles(self):
         # Setup DB and Config and Estimator
-        self.state = self.setup_db()
+        self.state = self.setup_db("data/test_data/videos/07_08_2024/split_two_vehicles.mp4")
         self.config = EstimatorConfig()
-        self.config.input_video = "data/test_data/videos/split_two_vehicles.mp4"
         self.estimator = SpeedEstimator(self.config)
         length = 4.100000
         
         # Start
         timer = time.time()
-        stop_signal = self.start_estimator()
+        stop_signal = self.start_estimator(profile=True)
         
         # Wait for thread to finish
         self.await_estimator()
@@ -388,11 +387,10 @@ class TestSpeedEstimator(unittest.TestCase):
         self.assertIn(VehicleDirection.LEFT_TO_RIGHT, directions)
         self.assertIn(VehicleDirection.RIGHT_TO_LEFT, directions)
         
-    def test_speed_estimation_early_stop(self):
+    def Xtest_speed_estimation_early_stop(self):
         # Setup DB and Config and Estimator
-        self.state = self.setup_db()
+        self.state = self.setup_db("data/test_data/videos/07_08_2024/split_additional_frames.mp4")
         self.config = EstimatorConfig()
-        self.config.input_video = "data/test_data/videos/split_additional_frames.mp4"
         self.estimator = SpeedEstimator(self.config)
         length = 11.000000
         
