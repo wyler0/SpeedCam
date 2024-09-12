@@ -65,12 +65,12 @@ class EstimatorConfig(BaseModel):
     mode: Literal['speed', 'calibration'] = 'speed'
     detector: str = 'opencv_farneback'
     input_video: Optional[Union[int, str]] = None
-    image_write_interval_frames: int = 20 # Minimum time between detected vehilce image writes
+    image_write_interval_frames: int = 1 # Minimum time between detected vehilce image writes
     
     #### CORRELATION ####
     MAX_Y_DELTA: int = 350 # Maximum vertical distance between events to still be considered the same event.
     MAX_MS_DELTA: int = 800 # Maximum time between events to still be considered the same event. 
-    X_DELTA_WEIGHT: float = 0.1 # Larger = more likely to be considered new vehicle (less likely to be considered same vehicle)
+    X_DELTA_WEIGHT: float = 0.05 # Larger = more likely to be considered new vehicle (less likely to be considered same vehicle)
     Y_DELTA_WEIGHT: float = 10 # Larger = more likely to be considered new vehicle (less likely to be considered same vehicle)
     NEW_EVENT_THRESH: int = 500 # Larger = less likely to accept uncorrealted event as new vehicle
     OVERLAP_REWARD_WEIGHT: int = 2000 # Larger = less likely to be considered new vehicle.
@@ -129,6 +129,12 @@ class SpeedEstimator():
         
         video.start()
         
+        # Fix the cropping constants for the video based on the video width
+        self.config.RIGHT_CROP_l2r = video.width - self.config.RIGHT_CROP_l2r
+        self.config.LEFT_CROP_l2r = self.config.LEFT_CROP_l2r
+        self.config.RIGHT_CROP_r2l = video.width - self.config.RIGHT_CROP_r2l
+        self.config.LEFT_CROP_r2l = self.config.LEFT_CROP_r2l
+        
         # Set the width and height of the video capture
         # self.video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.CAMERA_WIDTH)
         # self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.CAMERA_HEIGHT)
@@ -178,6 +184,11 @@ class SpeedEstimator():
         self.tracking_dict = {}
 
     ##### MAIN LOOP ######
+    
+    def run_loop_profile(self, stop_signal: multiprocessing.Event):
+        import cProfile
+        cProfile.runctx("self.run_loop(stop_signal)", globals(), locals(), filename="profile.prof")
+    
     def run_loop(self, stop_signal: multiprocessing.Event):
         self.setup()
         
@@ -191,9 +202,16 @@ class SpeedEstimator():
                         
             start_frame = self.video.frames_read
             last_image_write_time = start_frame
+            read_time_delta = 0
+            last_read_time = self.video.get_time_sec()
             
             try:
                 while self.running and self.get_next_image() and not stop_signal.is_set():
+                    # Update read time delta
+                    read_time_delta = self.video.get_time_sec() - last_read_time
+                    # logger.info(f"Read time delta: {read_time_delta}")
+                    last_read_time = self.video.get_time_sec()
+                    
                     # Apply dewarp
                     self.target_imgs[1] = self.apply_camera_dewarp(self.target_imgs[1])
 
@@ -230,11 +248,11 @@ class SpeedEstimator():
                                 self.add_vehicle_event(event, vehicle = self.tracking_dict.get(event_id, None))
                             
                     # Check for finished events
-                    self.check_finished_and_stale_events(db)
+                    self.check_finished_and_stale_events(db, read_time_delta=read_time_delta)
             
                 # Check for finished events
                 self.running = False
-                self.check_finished_and_stale_events(db, final=True)
+                self.check_finished_and_stale_events(db, final=True, read_time_delta=read_time_delta)
                 
                 # Clean up
                 shutil.rmtree(self.images_path)
@@ -251,10 +269,14 @@ class SpeedEstimator():
                 self.state.error = str(e)
                 db.commit()
     
-    def start(self) -> multiprocessing.Event:
+    def start(self, profile=False) -> multiprocessing.Event:
+        
+        import pstats
+        import cProfile
+
         self.running = True
         self.stop_signal = multiprocessing.Event()
-        self.process = multiprocessing.Process(target=self.run_loop, args=(self.stop_signal,))
+        self.process = multiprocessing.Process(target=self.run_loop if profile==False else self.run_loop_profile, args=(self.stop_signal,))
         self.process.start()
         return self.stop_signal
     
@@ -280,6 +302,7 @@ class SpeedEstimator():
         Returns: [event, event, ...]
         """
         events: List[TrackedVehicleEvent] = []
+        
         for frame_number, frame_flow_groups in enumerate(self.flow_groups):
             for flow_group in frame_flow_groups:
                 # Compute bounding box for the flow group
@@ -296,13 +319,24 @@ class SpeedEstimator():
                 if not (max_y > self.config.MIN_BBOX_Y):
                     continue
                 
+                avg_flow = np.mean(flow_group[:, 2])  # Calculate average flow vector
+                direction = VehicleDirection.RIGHT_TO_LEFT if avg_flow < 0 else VehicleDirection.LEFT_TO_RIGHT
+
+                # Apply cropping constants
+                if direction == VehicleDirection.LEFT_TO_RIGHT:  # Left to right
+                    if min_x < self.config.LEFT_CROP_l2r or max_x > self.config.RIGHT_CROP_l2r:
+                        continue
+                elif direction == VehicleDirection.RIGHT_TO_LEFT:  # Right to left
+                    if min_x < self.config.LEFT_CROP_r2l or max_x > self.config.RIGHT_CROP_r2l:
+                        continue
+                
                 # Create event
                 new_event = TrackedVehicleEvent(
                     frame_number=self.video.frames_read + frame_number,
-                    event_time=int(self.video.get_time_ms()),
+                    event_time=self.video.get_time_sec(),
                     flows=flow_group,
                     bbox=[min_x, min_y, width, height],
-                    avg_flow=np.mean(flow_group[:, 2:], axis=0).tolist()
+                    avg_flow=avg_flow
                 )
                 events.append(new_event)
         
@@ -337,6 +371,15 @@ class SpeedEstimator():
             
             # Apply filters
             valid_matches = (y_deltas < self.config.MAX_Y_DELTA) & (time_deltas < self.config.MAX_MS_DELTA)
+            
+            # Calculate direction of movement for each candidate vehicle
+            candidate_directions = np.array([-1 if sum([i.avg_flow for i in v.events])/len(v.events) < 0 else 1 for v in candidate_vehicles])
+            # Ensure events are not behind previous events
+            x_deltas_direction = x_deltas * candidate_directions
+            valid_direction = x_deltas_direction >= 0
+
+            # Update valid_matches
+            valid_matches = valid_matches & valid_direction
             
             # Calculate overlap rewards
             overlap_rewards = self._calculate_overlap_rewards(events, candidate_vehicles)
@@ -393,14 +436,18 @@ class SpeedEstimator():
         
         return overlap_rewards
     
-    def check_finished_and_stale_events(self, db: Session, final=False,
-                                        MAX_MS_SINCE_LAST_EVENT=1000, MAX_VEHILCE_TOTAL_ELPASED_MS=3000):
+    def check_finished_and_stale_events(self, db: Session, final=False, read_time_delta=-1,
+                                        MAX_MS_SINCE_LAST_EVENT=1000, MAX_VEHILCE_TOTAL_ELPASED_MS=4000):
         """ Finds ongoing tracked vehicles that have exited the frame. Finishes all open events if final is true. 
-        
+        args:
+            read_time_delta: Time delta since last read in seconds. Used to scale the time deltas for the comparison based on effective frame rate.
         config:
             MAX_MS_SINCE_LAST_EVENT: Maximum time since the vehicle was last tracked / appeared in a frame for event to be ongoing
             MAX_VEHILCE_TOTAL_ELPASED_MS: Maximum time a vehicle can be considered still ongoing from its first detection.
         """
+        # Scale delta based thresholds by read_time_delta
+        MAX_MS_SINCE_LAST_EVENT *= read_time_delta/0.06 # Roughly give the vehicle twenty five read opportunities for a detection. This handles most large occlusions (e.g., trees.)
+        
         # If data complete, move all tracked vehicles to finalized
         finished_vehicles = {}
         if final: finished_vehicles = self.tracking_dict
@@ -409,13 +456,14 @@ class SpeedEstimator():
             for vehicle_id,vehicle in self.tracking_dict.items():
                 finished = False
                 # Get overall event time
-                total_elapsed_time = self.video.get_time_ms() - vehicle.start_time
+                total_elapsed_time_sec = self.video.get_time_sec() - vehicle.start_time
                 # Get last detected time delta
-                last_event_delta = self.video.get_time_ms() - vehicle.events[-1].event_time
+                last_event_delta_sec = self.video.get_time_sec() - vehicle.events[-1].event_time
                 # Time cutoff comparison
-                if total_elapsed_time > MAX_VEHILCE_TOTAL_ELPASED_MS: finished = True
-                if last_event_delta > MAX_MS_SINCE_LAST_EVENT: finished = True
+                if total_elapsed_time_sec > MAX_VEHILCE_TOTAL_ELPASED_MS/1000: finished = True
+                if last_event_delta_sec > MAX_MS_SINCE_LAST_EVENT/1000: finished = True
                 # Finish
+                # logger.info(f"{vehicle_id} - {finished}: total_elapsed_time {total_elapsed_time_sec} last_event_delta {last_event_delta_sec}, MAX_SEC_SINCE_LAST_EVENT {MAX_MS_SINCE_LAST_EVENT/1000}")
                 if finished: finished_vehicles[vehicle_id] = vehicle
         
         # Finish the vehicles
@@ -439,7 +487,7 @@ class SpeedEstimator():
     def get_pixel_speed_estimate(self, vehicle: TrackedVehicle):
         # Average speed of all events, avg_flow is dx dy want to include both components in case of not perflect horizontal road perspective.
         #TODO: Optimize this? Pixel speed can be computed from the flow data in the grouping operation so no need to recompute just average.
-        return sum([np.linalg.norm(event.avg_flow) for event in vehicle.events]) / len(vehicle.events)
+        return np.abs(sum(event.avg_flow for event in vehicle.events) / len(vehicle.events))
     
     def convert_pixel_speed_to_world_speed(self, pixel_speed: float, direction: VehicleDirection): #TODO
         if direction == VehicleDirection.LEFT_TO_RIGHT:
@@ -452,7 +500,7 @@ class SpeedEstimator():
     def get_direction_estimate(self, events: List[TrackedVehicleEvent]):
         #TODO Optimize this? Direction can be returned from the grouping operation, as its already computed there...
         # average direction of all events
-        dx_avg = sum([event.avg_flow[0] for event in events]) / len(events)
+        dx_avg = sum([event.avg_flow for event in events]) / len(events)
         return VehicleDirection.RIGHT_TO_LEFT if dx_avg < 0 else VehicleDirection.LEFT_TO_RIGHT
     
     ##### TRACKING DATA UTILITIES ######
@@ -473,9 +521,11 @@ class SpeedEstimator():
         if len(self.tracking_dict[vehicle_id].events) > 1:
             self.tracking_dict[vehicle_id].direction = self.get_direction_estimate(self.tracking_dict[vehicle_id].events)
 
-    def finish_tracked_vehicle(self, db: Session, vehicle: TrackedVehicle, MIN_EVENTS_FOR_VALID=20) -> bool: #TODO (Saving of flows)
+    def finish_tracked_vehicle(self, db: Session, vehicle: TrackedVehicle, read_time_delta=-1, MIN_EVENTS_FOR_VALID=30) -> bool: #TODO (Saving of flows)
+        MIN_EVENTS_FOR_VALID = np.floor(np.exp(-read_time_delta*0.75)*MIN_EVENTS_FOR_VALID)/3
+        
         if len(vehicle.events) < MIN_EVENTS_FOR_VALID: 
-            logger.warning(f"Vehicle Failed: not enough events for vehicle {vehicle.vehicle_id}")
+            logger.warning(f"Vehicle Failed: not enough events for vehicle {vehicle.vehicle_id} with {len(vehicle.events)} events and a threshold of {MIN_EVENTS_FOR_VALID}")
             self.clean_image_paths(vehicle)
             return False
         
@@ -537,7 +587,7 @@ class SpeedEstimator():
         # Add new vehicle to tracking dict
         self.tracking_dict[vehicle_id] = TrackedVehicle(
             vehicle_id=vehicle_id,
-            start_time=int(self.video.get_time_ms())
+            start_time=self.video.get_time_sec()
         )
         return vehicle_id
 

@@ -6,7 +6,7 @@ from custom_enums import VehicleDirection
 
 class TrackedVehicleEvent(BaseModel):
     frame_number: Optional[int] = None
-    event_time: Optional[int] = None  # Relative to video start time
+    event_time: Optional[float] = None  # Relative to video start time
     flows: Optional[any] = None 
     bbox: Optional[any] = None 
     avg_flow: Optional[any] = None 
@@ -17,8 +17,8 @@ class TrackedVehicleEvent(BaseModel):
         
 class TrackedVehicle(BaseModel):
     vehicle_id: Optional[int] = None
-    start_time: Optional[int] = None  # Video time in ms
-    elapsed_time: Optional[int] = None  # Vehicle Last Event Time - Start time
+    start_time: Optional[float] = None  # Video time in sec
+    elapsed_time: Optional[float] = None  # Vehicle Last Event Time - Start time
     pixel_speed_estimate: Optional[float] = None
     world_speed_estimate: Optional[float] = None
     speed_error: Optional[float] = None
