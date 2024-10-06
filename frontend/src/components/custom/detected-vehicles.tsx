@@ -18,15 +18,18 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
-import { EyeIcon, FilterIcon, CalendarIcon } from '@/components/custom/icons';
+import { FilterIcon, CalendarIcon, TrashIcon } from '@/components/custom/icons';
 
 import { Detection, Direction, PredefinedFilterType, VehicleDetectionFilters } from '@/services/vehicleDetectionService';
 import { SpeedCalibration } from '@/services/detectionStatusService';
+import { deleteVehicleDetection } from '@/services/vehicleDetectionService';
+import { toast } from "react-hot-toast";
 
 // Add these imports at the top of the file
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { BASE_URL } from '@/api/endpoints';
+import Image from 'next/image';
 
 interface DetectedVehiclesProps {
   detections: Detection[];
@@ -244,6 +247,18 @@ export function DetectedVehicles({
     saveAs(content, filename);
   };
 
+  const handleDelete = async (detectionId: number) => {
+    try {
+      await deleteVehicleDetection(detectionId);
+      // Remove the deleted detection from the local state
+      const updatedDetections = detections.filter(d => d.id !== detectionId);
+      toast.success("The vehicle detection has been successfully deleted.");
+    } catch (error) {
+      console.error('Error deleting detection:', error);
+      toast.error("Failed to delete the vehicle detection. Please try again.");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -449,6 +464,7 @@ export function DetectedVehicles({
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Thumbnail</TableHead>
                         <TableHead>Time</TableHead>
                         <TableHead>Camera</TableHead>
                         <TableHead>Speed</TableHead>
@@ -456,22 +472,44 @@ export function DetectedVehicles({
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
-                      <TableBody>
-                        {detections.filter(detection => detection.real_world_speed_estimate != null).map((detection) => (
-                          <TableRow key={detection.id}>
-                            <TableCell>{detection.detection_date}</TableCell>
-                            <TableCell>{detection.speed_calibration_id}</TableCell>
-                            <TableCell>{detection.real_world_speed_estimate} mph</TableCell>
-                            <TableCell>{detection.direction}</TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon" className="rounded-full">
-                                <EyeIcon className="w-5 h-5" />
-                                <span className="sr-only">View</span>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
+                    <TableBody>
+                      {detections.filter(detection => detection.real_world_speed_estimate != null).map((detection) => (
+                        <TableRow key={detection.id}>
+                          <TableCell>
+                            {detectionImages[detection.id] && detectionImages[detection.id].length > 0 && (
+                              <div className="w-36 rounded-md">
+                                <img
+                                  src={detectionImages[detection.id][Math.floor(detectionImages[detection.id].length / 2)]}
+                                  alt={`Vehicle detected at ${detection.detection_date}`}
+                                  className="rounded-md"
+                                  style={{ 
+                                    width: '100%', 
+                                    height: 'auto', 
+                                    objectFit: "cover", 
+                                    clipPath: "inset(15% 0 15% 0)" // Cropping top and bottom 15%
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>{detection.detection_date}</TableCell>
+                          <TableCell>{detection.speed_calibration_id}</TableCell>
+                          <TableCell>{detection.real_world_speed_estimate} mph</TableCell>
+                          <TableCell>{detection.direction}</TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="destructive" 
+                              size="icon" 
+                              className="rounded-full"
+                              onClick={() => handleDelete(detection.id)}
+                            >
+                              <TrashIcon className="w-5 h-5" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
                   </Table>
                 )}
               </CardContent>

@@ -189,3 +189,13 @@ export function useVehicleDetectionService(initialFilters: VehicleDetectionFilte
     startPolling 
   };
 }
+
+export const deleteVehicleDetection = async (detectionId: number): Promise<void> => {
+  const response = await fetch(`${getEndpoint('VEHICLE_DETECTIONS')}/${detectionId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete vehicle detection');
+  }
+};

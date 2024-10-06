@@ -113,9 +113,9 @@ export function SpeedCalibrations({
                     <CardDescription>{calibration.description}</CardDescription>
                   </CardHeader>
                   <CardFooter className="flex items-center justify-between">
-                    <Button variant="outline" size="sm" onClick={() => handleUpdateCalibration(calibration.id)}>
+                    {/* <Button variant="outline" size="sm" onClick={() => handleUpdateCalibration(calibration.id)}>
                       Update
-                    </Button>
+                    </Button> */}
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleDeleteCalibration(calibration.id)}>
                       <TrashIcon className="w-5 h-5" />
                       <span className="sr-only">Delete</span>

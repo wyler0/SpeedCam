@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
   UPDATE_SPEED_CALIBRATION_CROP: `${API_BASE_URL}/speed-calibrations/{calibration_id}/crop`,
   
   // Speed limit
-  SPEED_LIMIT: `${API_BASE_URL}/speed-calibrations/speed-limit`,
+  SPEED_LIMIT: `${API_BASE_URL}/speed-limit`,
   
   // Live detection
   LIVE_DETECTION: `${API_BASE_URL}/live-detection`,

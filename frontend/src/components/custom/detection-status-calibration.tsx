@@ -32,7 +32,7 @@ export function DetectionStatusCalibrationToggle() {
       {/* Camera Selection Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" disabled={processingVideo || isDetectionOn}>
             {selectedCamera !== null 
               ? availableCameras.find(cam => cam.id === selectedCamera)?.name || 'Unknown Camera'
               : 'Select Camera...'}
@@ -53,7 +53,7 @@ export function DetectionStatusCalibrationToggle() {
       </DropdownMenu>
 
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild disabled={processingVideo || isDetectionOn}>
           <Button variant="outline" size="sm">
             {cameraCalibrationId 
               ? calibrations.find(cal => cal.id.toString() === cameraCalibrationId)?.camera_name || 'Unknown Calibration'

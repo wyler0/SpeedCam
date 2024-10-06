@@ -2,7 +2,7 @@
 
 import os
 from typing import List
-
+import logging
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -20,6 +20,14 @@ from routers import (
     speed_calibrations_router,
     live_detection_router
 )
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 app = FastAPI(title="Vehicle Tracking System API")
 
@@ -96,13 +104,14 @@ async def list_vehicle_images(
 
 
 # Set, get vehicle speed limit
-@app.post("/api/v1/speed-calibrations/speed-limit")
+@app.post("/api/v1/speed-limit")
 async def set_speed_limit(speed_limit: int):
     config.SPEED_LIMIT_MPH = speed_limit
     return {"message": f"Speed limit set to {speed_limit} mph"}
 
-@app.get("/api/v1/speed-calibrations/speed-limit")
+@app.get("/api/v1/speed-limit")
 async def get_speed_limit():
+    logger.info("get_speed_limit", config.SPEED_LIMIT_MPH)
     return {"speed_limit": config.SPEED_LIMIT_MPH}
 
 # Run the app

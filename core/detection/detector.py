@@ -42,9 +42,6 @@ logger.addHandler(console_handler)
 """
 #TODO:
     - [ ] Update installation instructions and run instructions
-    - [ ] Fix speed limit API issues
-    - [ ] Fix frontend latest detection image to render the crops correctly (or don't render them at all?)
-    - [ ] Add thumbnails to the table in the frotnend detections view
      
 #WORKFLOW
     - ANY MODE:

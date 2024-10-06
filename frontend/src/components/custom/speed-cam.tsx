@@ -2,7 +2,7 @@
 
 'use client'
 import Link from "next/link"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DetectionStatistics } from "@/components/custom/detection-statistics"
 import { DetectionStatusToggle } from "@/components/custom/detection-status"
 import { DetectedVehicles } from "@/components/custom/detected-vehicles"
@@ -41,12 +41,16 @@ export function SpeedCam() {
     processingVideo,
     updateSelectedCamera,
     speedCalibrationId,
+    cropValues,  // We'll use this directly
     calibrations,
     toggleDetection,
     updateSpeedCalibration,
     fetchCalibrationIds,
   } = useDetectionStatusService();
 
+  useEffect(() => {
+    fetchCalibrationIds();
+  }, [fetchCalibrationIds]);
 
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
@@ -104,7 +108,10 @@ export function SpeedCam() {
               />
             </div>
             <div className="grid gap-6 mt-6">
-              <LatestDetectionImage />
+              <LatestDetectionImage 
+                cropValues={cropValues || undefined}  // Use undefined if cropValues is null
+                allowCropAdjustment={false}
+              />
             </div>
             <div className="grid gap-6 mt-6">
               <DetectionStatistics 
@@ -115,7 +122,6 @@ export function SpeedCam() {
                 updateFilters={updateFilters}
                 getStatistics={getStatistics}
                 speedCalibrationId={speedCalibrationId}
-                speedLimit={speedLimit}
               />
             </div>
           </section>

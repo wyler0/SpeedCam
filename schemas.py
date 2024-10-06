@@ -59,12 +59,6 @@ class SpeedCalibrationUpdate(BaseModel):
     right_crop_l2r: Optional[int] = None
     left_crop_r2l: Optional[int] = None
     right_crop_r2l: Optional[int] = None
-    
-class SpeedCalibrationCropPercentages(BaseModel):
-    left_crop_l2r: Optional[float] = None
-    right_crop_l2r: Optional[float] = None
-    left_crop_r2l: Optional[float] = None
-    right_crop_r2l: Optional[float] = None
 
 class SpeedCalibration(SpeedCalibrationBase):
     id: int

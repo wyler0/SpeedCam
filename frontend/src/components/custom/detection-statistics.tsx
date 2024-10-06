@@ -16,7 +16,6 @@ interface DetectionStatisticsProps {
   updateFilters: (newFilters: Partial<VehicleDetectionFilters>) => void;
   getStatistics: () => { vehiclesDetected: number; averageSpeed: number; speedingViolations: number };
   speedCalibrationId: string | null;
-  speedLimit: number;
 }
 
 export function DetectionStatistics({
@@ -27,7 +26,6 @@ export function DetectionStatistics({
   updateFilters,
   getStatistics,
   speedCalibrationId,
-  speedLimit,
 }: DetectionStatisticsProps) {
   React.useEffect(() => {
     if (speedCalibrationId) {
@@ -49,7 +47,7 @@ export function DetectionStatistics({
     <Card>
       <CardHeader>
         <CardTitle>Detection Statistics (Last 7 Days)</CardTitle>
-        <CardDescription>Current real-time detection status and statistics. Speed limit: {speedLimit} mph</CardDescription>
+        <CardDescription>Current real-time detection status and statistics.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid md:grid-cols-3 gap-4">
@@ -63,7 +61,7 @@ export function DetectionStatistics({
           </div>
           <div className="flex flex-col items-center gap-2">
             <div className="text-4xl font-bold">{speedCalibrationId ? stats.speedingViolations : 'N/A'}</div>
-            <div className="text-muted-foreground">Speeding Violations ({speedLimit} mph)</div>
+            <div className="text-muted-foreground">Speeding Violations</div>
           </div>
         </div>
       </CardContent>

@@ -27,10 +27,10 @@ interface LatestDetectionImageProps {
 }
 
 const DEFAULT_CROP_VALUES = {
-  left_crop_l2r: 25,
-  right_crop_l2r: 75,
-  left_crop_r2l: 25,
-  right_crop_r2l: 75,
+  left_crop_l2r: 0,
+  right_crop_l2r: 100,
+  left_crop_r2l: 0,
+  right_crop_r2l: 100,
 };
 
 export function LatestDetectionImage({
@@ -50,6 +50,9 @@ export function LatestDetectionImage({
   const imageRef = useRef<HTMLImageElement>(null);
   const isDraggingRef = useRef(false);
   const activeCropLineRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 640, height: 480 });
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     const fetchLatestImage = async () => {
@@ -71,6 +74,28 @@ export function LatestDetectionImage({
       { position: cropValues.right_crop_r2l, isTop: false, isLeft: false },
     ]);
   }, [cropValues]);
+
+  const updateImageDimensions = useCallback(() => {
+    if (imageRef.current && containerRef.current) {
+      const containerWidth = containerRef.current.clientWidth;
+      const naturalWidth = imageRef.current.naturalWidth || 640;
+      const naturalHeight = imageRef.current.naturalHeight || 480;
+      const imageAspectRatio = naturalWidth / naturalHeight;
+      const imageWidth = Math.min(640, containerWidth);
+      const imageHeight = Math.round(imageWidth / imageAspectRatio);
+      setImageDimensions({ width: imageWidth, height: imageHeight });
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateImageDimensions);
+    return () => window.removeEventListener('resize', updateImageDimensions);
+  }, [updateImageDimensions]);
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+    updateImageDimensions();
+  }, [updateImageDimensions]);
 
   const handleMouseDown = useCallback((index: number) => (e: React.MouseEvent) => {
     if (!allowCropAdjustment) return;
@@ -122,7 +147,7 @@ export function LatestDetectionImage({
         style={{
           position: 'absolute',
           top: line.isTop ? '0%' : '50%',
-          left: `${line.position}%`,
+          left: `${(imageDimensions.width * line.position) / 100}px`,
           width: '2px',
           height: '50%',
           backgroundColor: 'red',
@@ -138,17 +163,20 @@ export function LatestDetectionImage({
   }
 
   return (
-    <div className="mt-4 text-center relative">
-      <Image
-        ref={imageRef}
-        src={imageUrl}
-        alt="Latest detection"
-        width={640}
-        height={480}
-        className="rounded-lg shadow-md mx-auto"
-        unoptimized={true}
-      />
-      {renderCropLines()}
+    <div className="mt-4 text-center relative" ref={containerRef}>
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <Image
+          ref={imageRef}
+          src={imageUrl}
+          alt="Latest detection"
+          width={imageDimensions.width}
+          height={imageDimensions.height}
+          className="rounded-lg shadow-md mx-auto"
+          unoptimized={true}
+          onLoad={handleImageLoad}
+        />
+        {imageLoaded && renderCropLines()}
+      </div>
       <h3 className="text-lg font-semibold my-2">Latest Detection Image</h3>
     </div>
   );

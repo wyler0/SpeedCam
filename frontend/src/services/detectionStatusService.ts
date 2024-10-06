@@ -3,6 +3,14 @@ import { getEndpoint } from '@/api/endpoints';
 import toast from 'react-hot-toast';
 import { useSharedDetectionStatusService } from './sharedDetectionStatusService';
 
+
+export interface CropValues {
+  left_crop_l2r: number;
+  right_crop_l2r: number;
+  left_crop_r2l: number;
+  right_crop_r2l: number;
+}
+
 export interface SpeedCalibration {
   name: string;
   description: string;
@@ -13,12 +21,16 @@ export interface SpeedCalibration {
   right_to_left_constant: number;
   id: number;
   vehicle_detections: number;
+  left_crop_l2r: number;
+  right_crop_l2r: number;
+  left_crop_r2l: number;
+  right_crop_r2l: number;
 }
-
 
 export function useDetectionStatusService() {
   const shared = useSharedDetectionStatusService();
   const [speedCalibrationId, setSpeedCalibrationId] = useState<string | null>(null);
+  const [cropValues, setCropValues] = useState<CropValues | null>(null);
   const [calibrations, setCalibrations] = useState<SpeedCalibration[]>([]);
 
   const fetchCalibrationIds = useCallback(async () => {
@@ -36,6 +48,25 @@ export function useDetectionStatusService() {
       console.error("Error fetching calibration IDs:", error);
     }
   }, []);
+
+  useEffect(() => {
+    fetchCalibrationIds();
+  }, [fetchCalibrationIds]);
+
+  useEffect(() => {
+    if (speedCalibrationId) {
+      const selectedCalibration = calibrations.find(c => c.id.toString() === speedCalibrationId);
+      console.log("selectedCalibration", selectedCalibration, "with crop values", selectedCalibration?.left_crop_l2r, selectedCalibration?.right_crop_l2r, selectedCalibration?.left_crop_r2l, selectedCalibration?.right_crop_r2l);
+      if (selectedCalibration) {
+        setCropValues({
+          left_crop_l2r: selectedCalibration.left_crop_l2r,
+          right_crop_l2r: selectedCalibration.right_crop_l2r,
+          left_crop_r2l: selectedCalibration.left_crop_r2l,
+          right_crop_r2l: selectedCalibration.right_crop_r2l,
+        });
+      }
+    }
+  }, [speedCalibrationId, calibrations]);
 
   const toggleDetection = async () => {
     if (shared.processingVideo) {
@@ -100,9 +131,11 @@ export function useDetectionStatusService() {
       }
 
       await shared.fetchDetectionStatus();
+      await fetchCalibrationIds();
     } catch (error) {
       console.error('Error updating speed calibration:', error);
       setSpeedCalibrationId(null);
+      setCropValues(null);
       toast.error('Failed to update speed calibration. Please try again.', {
         position: 'bottom-right',
         duration: 4000,
@@ -114,6 +147,7 @@ export function useDetectionStatusService() {
     ...shared,
     speedCalibrationId,
     calibrations,
+    cropValues,
     toggleDetection,
     updateSpeedCalibration,
     fetchCalibrationIds,
