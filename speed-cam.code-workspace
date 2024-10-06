@@ -2,9 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../SpeedCam/speed-camera-v2"
 		}
 	],
 	"settings": {
@@ -31,7 +28,7 @@
 				"PYTHONPATH": "${workspaceFolder:speed-cam}"
 			},
 			"cwd": "${workspaceFolder:speed-cam}",
-			"program": "core/estimation/test.py",
+			"program": "core/detection/test.py",
 			"console": "integratedTerminal"
 		}
 		]

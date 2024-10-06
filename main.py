@@ -33,7 +33,7 @@ app.add_middleware(
 )
 
 # Create directories if they don't exist
-for path in [config.DETECTIONS_DATA_PATH, config.CALIBRATION_DATA_PATH, config.VIDEO_DATA_PATH, config.LATEST_DETECTION_IMAGE_PATH, config.UPLOADS_DIR]:
+for path in [config.DETECTIONS_DATA_PATH, config.CALIBRATION_DATA_PATH, config.TEMP_DATA_PATH, config.VIDEO_DATA_PATH, config.LATEST_DETECTION_IMAGE_PATH, config.UPLOADS_DIR]:
     if not os.path.exists(path):
         os.makedirs(path)
 

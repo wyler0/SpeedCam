@@ -16,14 +16,14 @@ from database import get_db
 from models import SpeedCalibration, LiveDetectionState as LiveDetectionStateModel, CameraCalibration
 from schemas import LiveDetectionState, SpeedCalibrationCreate
 from routers.speed_calibrations import create_speed_calibration, delete_speed_calibration
-from core.estimation.estimator import SpeedEstimator, EstimatorConfig
+from core.detection.detector import SpeedDetector, DetectorConfig
 from core.video.webcam_utils import get_available_cameras
 from config import UPLOADS_DIR
 
 logger = logging.getLogger(__name__)
 
 stop_event: Optional[multiprocessing.Event] = None
-estimator: SpeedEstimator = SpeedEstimator(EstimatorConfig())
+detector: SpeedDetector = SpeedDetector(DetectorConfig())
 
 router = APIRouter()
 @router.get("/status", response_model=LiveDetectionState)
@@ -61,14 +61,13 @@ async def start_live_detection(db: Session = Depends(get_db)
             state.running = True
             
             # Configure the estimator
-                
-            estimator.config.input_video = state.camera_source if state.camera_source is not None else state.video_path
+            detector.config.input_video = state.camera_source if state.camera_source is not None else state.video_path
             if state.video_path is not None and state.camera_source is None:
                 state.processing_video = True
             
             db.commit()
             # Start the estimator
-            estimator.start()
+            detector.start()
         else:
             if state.video_path is not None and state.camera_source is None:
                 state.processing_video = False
@@ -95,7 +94,7 @@ async def stop_live_detection(db: Session = Depends(get_db)
             db.commit()
             
             # Stop the estimator
-            estimator.stop()
+            detector.stop()
             state.running = False
             state.started_at = None
             

@@ -66,9 +66,11 @@ class VehicleDetectionBase(BaseModel):
     pixel_speed_estimate: Optional[float] = Field(default=None, ge=0, description="Pixel speed estimate must be non-negative")
     real_world_speed_estimate: Optional[float] = Field(default=None, ge=0, description="Real world speed estimate must be non-negative")
     real_world_speed: Optional[float] = Field(default=None, ge=0, description="Real world speed must be non-negative")
-    optical_flow_path: Optional[str] = None
+    confidence: Optional[float] = Field(default=None, ge=0, le=1, description="Confidence must be between 0 and 1")
     speed_calibration_id: int
-    error: Optional[str] = None
+    events_data_path: Optional[str] = None
+    
+    estimation_status: Optional[str] = None
 
 class VehicleDetectionCreate(VehicleDetectionBase):
     pass
@@ -78,10 +80,11 @@ class VehicleDetectionUpdate(BaseModel):
     pixel_speed_estimate: Optional[float] = Field(default=None, ge=0, description="Pixel speed estimate must be non-negative")
     real_world_speed_estimate: Optional[float] = Field(default=None, ge=0, description="Real world speed estimate must be non-negative")
     real_world_speed: Optional[float] = Field(default=None, ge=0, description="Real world speed must be non-negative")
-    optical_flow_path: Optional[str] = None
+    confidence: Optional[float] = Field(default=None, ge=0, le=1, description="Confidence must be between 0 and 1")
     direction: Optional[VehicleDirection] = None
-    error: Optional[str] = None
-
+    estimation_status: Optional[str] = None
+    events_data_path: Optional[str] = None
+    
 class VehicleDetection(VehicleDetectionBase):
     id: int
     

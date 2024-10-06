@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, Enum, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from custom_enums import VehicleDirection
+from custom_enums import VehicleDirection, EstimationStatus
 
 Base = declarative_base()
 
@@ -46,19 +46,18 @@ class VehicleDetection(Base):
     __tablename__ = 'vehicle_detections'
 
     id = Column(Integer, primary_key=True)
+    speed_calibration_id = Column(Integer, ForeignKey('speed_calibrations.id', ondelete="CASCADE"), nullable=False)
     detection_date = Column(DateTime, nullable=False)
     thumbnail_path = Column(String, nullable=True)
+    events_data_path = Column(String, nullable=True)
+    
     direction = Column(Enum(VehicleDirection), nullable=True)
     pixel_speed_estimate = Column(Float, nullable=True)
     real_world_speed_estimate = Column(Float, nullable=True)
     real_world_speed = Column(Float, nullable=True)
-    
     confidence = Column(Float, nullable=True)
+    estimation_status = Column(Enum(EstimationStatus), nullable=True)
     
-    optical_flow_path = Column(String, nullable=True)
-    speed_calibration_id = Column(Integer, ForeignKey('speed_calibrations.id', ondelete="CASCADE"), nullable=False)
-    error = Column(String, nullable=True)
-
     speed_calibration = relationship("SpeedCalibration", back_populates="vehicle_detections")
     
 class LiveDetectionState(Base):
