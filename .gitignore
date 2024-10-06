@@ -9,6 +9,8 @@
 **/__pycache__/**
 *.db
 
+utils/experimenting/*
+
 data/*
 package-lock.json
 frontend/venv
