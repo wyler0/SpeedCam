@@ -4,6 +4,8 @@
 
 SpeedCam is an advanced vehicle speed detection system that utilizes computer vision and machine learning techniques to accurately measure and record vehicle speeds in real-time. This system is designed for traffic monitoring, law enforcement, and road safety applications. AI wrote more than 90% of the code in this project. 
 
+<img src="images/latest_detection_image_view.png" height="600" alt="Latest Detection Image View">
+
 ## How It Works
 
 1. **Object Detection**: The system uses a YOLO-based object detection algorithm to identify vehicles in real-time video streams.
@@ -92,6 +94,10 @@ An example of a valid calibration image with rows = 6 and columns = 8, with dete
 
 <img src="images/calibration_sample.jpg" width="300" height="200" alt="Sample Calibration Image">
 
+An example screenshot of an in progress camera calibration setup:
+
+<img src="images/cam_calibration_view.png" width="300" alt="Camera Calibration Example">
+
 ### 2. Speed Calibration
 
 After camera calibration, you need to create a speed calibration:
@@ -108,6 +114,15 @@ After camera calibration, you need to create a speed calibration:
         1. Upload a video via the choose file selector. Video processing will begin automatically. 
 5. For each detected vehicle, either enter a known speed or delete the vehicle. You must have at least two vehicles for each direction in order for the calibration to be accepted.
 6. Once you are satisfied, hit Submit Calibration. The system will process the video and calculate the necessary constants to convert pixel movement to real-world speeds.
+
+Note: The red lines overlayed on the video are the crop lines for the detection. These are used to define the area of the video that is used to detect vehicles for each lane. If occlusions are present within the crop area, the same vehicle may be detected multiple times erroneously.
+- These can be dragged to change the crop area. The crop area for each lane should surround one contiguous segment of the lane, and should be as large as possible. 
+- The crop area must be set prior to detecting any vehicles. 
+- Tip: Upload a video or start detection so that you can see where to put the crop lines, then delete any detections from the initial upload and start again.
+
+An example screencapture of an in-progress speed calibration setup:
+
+<img src="images/speed_calibration_view.png" width="300" alt="Speed Calibration Example">
 
 ### 3. Running the Detector
 

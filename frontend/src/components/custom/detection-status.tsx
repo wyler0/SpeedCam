@@ -111,7 +111,7 @@ export function DetectionStatusToggle({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
-            {speedCalibrationId ? speedCalibrationId : 'Select Speed Calibration...'}
+            {speedCalibrationId ? calibrations.find(calibration => calibration.id === Number(speedCalibrationId))?.name : 'Select Speed Calibration...'}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -130,7 +130,7 @@ export function DetectionStatusToggle({
 
       <Button 
         onClick={toggleDetection} 
-        className={`px-4 py-2 rounded ${isDetectionOn ? 'bg-red-500' : 'bg-green-500'} text-white`}
+        className={`px-4 py-2 rounded-md shadow-md transition duration-200 ease-in-out ${isDetectionOn ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white`}
         disabled={processingVideo || (!isDetectionOn && (!speedCalibrationId || selectedCamera === null))}
       >
         {isDetectionOn ? 'Turn Off' : 'Turn On'}

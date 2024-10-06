@@ -111,7 +111,6 @@ async def set_speed_limit(speed_limit: int):
 
 @app.get("/api/v1/speed-limit")
 async def get_speed_limit():
-    logger.info("get_speed_limit", config.SPEED_LIMIT_MPH)
     return {"speed_limit": config.SPEED_LIMIT_MPH}
 
 # Run the app

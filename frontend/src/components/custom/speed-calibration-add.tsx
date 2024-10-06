@@ -54,10 +54,10 @@ export function SpeedCalibrationAdd({
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [calibrationName, setCalibrationName] = useState("Enter Calibration Name Here")
   const [cropValues, setCropValues] = useState({
-    left_crop_l2r: 25,
-    right_crop_l2r: 75,
-    left_crop_r2l: 25,
-    right_crop_r2l: 75,
+    left_crop_l2r: 0,
+    right_crop_l2r: 100,
+    left_crop_r2l: 0,
+    right_crop_r2l: 100,
   });
   
   const { uploadCalibrationVideo, processingVideo, submitSpeedCalibration } = useCalibrationStatusService();
