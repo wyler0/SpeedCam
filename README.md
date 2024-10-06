@@ -2,7 +2,7 @@
 
 ## Overview
 
-SpeedCam is an advanced vehicle speed detection system that utilizes computer vision and machine learning techniques to accurately measure and record vehicle speeds in real-time. This system is designed for traffic monitoring, law enforcement, and road safety applications.
+SpeedCam is an advanced vehicle speed detection system that utilizes computer vision and machine learning techniques to accurately measure and record vehicle speeds in real-time. This system is designed for traffic monitoring, law enforcement, and road safety applications. AI wrote more than 90% of the code in this project. 
 
 ## How It Works
 
@@ -69,20 +69,45 @@ SpeedCam is an advanced vehicle speed detection system that utilizes computer vi
 
 Before using the system, you need to create a camera calibration:
 
-1. Capture at least 8 images of a checkerboard grid pattern from different angles.
-2. Use the "Create Camera Calibration" functionality in the frontend.
-3. Upload the grid images and process the calibration.
+1. Click "Add Calibration" in the Camera Calibrations panel. 
+2. Enter a camera name for this camera calibration. 
+3. Enter the row and column count of the grid image you will be using. For the sample provided in the image located in [Checkerboard](images/Checkerboard-A4-25mm-8x6.pdf), rows is 6 and columns is 8.
+3. Adding Calibration Images:    
+    - Via Live Camera Source:
+        1. Select the camera source.
+        3. Enter the row and column count of the grid image you will be using. 
+        4. Hold up the grid image at various angles in front of the camera. 
+        5. Hit the capture button to capture a new calibration image. Capture at least 8 images of a checkerboard grid pattern from different angles.
+    - Via Uploaded Images:
+        1. Click on "Switch to Upload" 
+        2. Click on "Upload Images" and select your calibration images from your disk. 
+4. As you upload images, these images will appear grayed out with an X if processing fails, and will show a checkmark if they are valid. If an image fails processing, the likely issues are:
+    - The grid is not fully visible in the frame. 
+    - The grid is too far away from the camera. It should take up at least 60% of the visible area.
+    - The number of rows and columns selected does not match the grid used.
+    - The image lighting is not bright enough. Turn on an overhead light, or wait for a clear sky day.
+5. Once you have uploaded enough valid images, press save calibration. Your images will be processed a final time and the calibration will be ready for use.
 
-This step corrects for lens distortion and ensures accurate measurements.
+An example of a valid calibration image with rows = 6 and columns = 8, with detected corners marked:
+
+<img src="images/calibration_sample.jpg" width="300" height="200" alt="Sample Calibration Image">
 
 ### 2. Speed Calibration
 
 After camera calibration, you need to create a speed calibration:
 
-1. Record video of vehicles traveling at known speeds in both lanes.
-2. Use the "Create Speed Calibration" feature in the frontend.
-3. Upload the calibration video and enter the known speeds.
-4. The system will process the video and calculate the necessary constants to convert pixel movement to real-world speeds.
+1. Click Add Calibration in the Speed Calibration panel. 
+2. Enter a new name for this calibration. 
+3. Select the associated camera calibration
+4. Adding Detections: 
+    - Via Live Camera Source:
+        1. Select the input camera source you wish to use from the select camera option. 
+        2. When ready, click start calibration. A camera feed will be captured and vehicles detected. 
+        3. When the desired vehicles you're interested in are detected with known speeds, hit stop calibration. 
+    - Via Recorded Videos:
+        1. Upload a video via the choose file selector. Video processing will begin automatically. 
+5. For each detected vehicle, either enter a known speed or delete the vehicle. You must have at least two vehicles for each direction in order for the calibration to be accepted.
+6. Once you are satisfied, hit Submit Calibration. The system will process the video and calculate the necessary constants to convert pixel movement to real-world speeds.
 
 ### 3. Running the Detector
 
@@ -121,12 +146,8 @@ This comprehensive view allows you to monitor real-time detections, analyze spee
 
 ## Contributing
 
-[Instructions for contributors, if applicable]
+Feel free to contribute to this project by submitting pull requests or opening issues or by forking the code and using it for your own purposes. Just remember to reference this project in your code. Responses are not guaranteed. This is not a production ready project, and is meant only for educational purposes. 
 
 ## License
 
-[Specify the license under which this project is released]
-
-## Support
-
-[Provide contact information or links for support]
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
