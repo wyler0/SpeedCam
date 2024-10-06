@@ -125,3 +125,21 @@ async def submit_speed_calibration(calibration_id: int, db: Session = Depends(ge
 
     return db_calibration
 
+@router.put("/{calibration_id}/crop", response_model=schemas.SpeedCalibration)
+async def update_speed_calibration_crop(
+    calibration_id: int,
+    crop_values: schemas.SpeedCalibrationUpdate,
+    db: Session = Depends(get_db)
+):
+    db_calibration = db.query(models.SpeedCalibration).get(calibration_id)
+    if db_calibration is None:
+        raise HTTPException(status_code=404, detail="Speed calibration not found")
+    
+    update_data = crop_values.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_calibration, key, value)
+    
+    db.commit()
+    db.refresh(db_calibration)
+    return db_calibration
+

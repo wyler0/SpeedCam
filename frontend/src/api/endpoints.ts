@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
   SPEED_CALIBRATIONS: `${API_BASE_URL}/speed-calibrations`,
   SPEED_CALIBRATIONS_SUBMIT: `${API_BASE_URL}/speed-calibrations/{calibration_id}/submit`,
   SPEED_CALIBRATIONS_UPDATE: `${API_BASE_URL}/speed-calibrations/{calibration_id}`,
+  UPDATE_SPEED_CALIBRATION_CROP: `${API_BASE_URL}/speed-calibrations/{calibration_id}/crop`,
   
   // Speed limit
   SPEED_LIMIT: `${API_BASE_URL}/speed-calibrations/speed-limit`,

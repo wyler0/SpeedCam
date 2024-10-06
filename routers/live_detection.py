@@ -228,6 +228,10 @@ async def set_calibration_mode(is_calibrating: bool, db: Session = Depends(get_d
                     calibration_date = datetime.now(),
                     camera_calibration_id = -1,
                     valid = False,
+                    left_crop_l2r=0,
+                    right_crop_l2r=100,
+                    left_crop_r2l=0,
+                    right_crop_r2l=100,
                     left_to_right_constant = None,
                     right_to_left_constant = None
                 ),

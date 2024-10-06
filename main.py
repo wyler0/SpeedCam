@@ -33,7 +33,7 @@ app.add_middleware(
 )
 
 # Create directories if they don't exist
-for path in [config.DETECTIONS_DATA_PATH, config.CALIBRATION_DATA_PATH, config.TEMP_DATA_PATH, config.VIDEO_DATA_PATH, config.LATEST_DETECTION_IMAGE_PATH, config.UPLOADS_DIR]:
+for path in [config.DETECTIONS_DATA_PATH, config.CALIBRATION_DATA_PATH, config.TEMP_DATA_PATH, config.LATEST_DETECTION_IMAGE_PATH, config.UPLOADS_DIR]:
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -74,14 +74,13 @@ static_dir = os.path.abspath("data/detections_data")
 app.mount("/detections", StaticFiles(directory=static_dir), name="detections")
 
 # List vehicle images
-@app.get("/detection/{calibration_date}/vehicles/{vehicle_id}/images", response_model=List[str])
+@app.get("/detection/{calibration_date}/{vehicle_id}/bboxes", response_model=List[str])
 async def list_vehicle_images(
     calibration_date: str,
     vehicle_id: int,
 ):
     # Construct the path to the images directory
-    images_dir = os.path.join(static_dir, calibration_date, "vehicles", str(vehicle_id), "images")
-    
+    images_dir = os.path.join(static_dir, calibration_date, str(vehicle_id), "images")
     # Check if the directory exists
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail="Images directory not found")
@@ -90,7 +89,7 @@ async def list_vehicle_images(
     image_files = [f for f in os.listdir(images_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
     
     # Construct the full URLs for each image
-    base_url = f"/detections/{calibration_date}/vehicles/{vehicle_id}/images"
+    base_url = f"/detections/{calibration_date}/{vehicle_id}/bboxes"
     image_urls = [f"{base_url}/{image}" for image in image_files]
     
     return image_urls

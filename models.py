@@ -38,6 +38,10 @@ class SpeedCalibration(Base):
     valid = Column(Boolean, default=False, nullable=False)
     left_to_right_constant = Column(Float, nullable=True)
     right_to_left_constant = Column(Float, nullable=True)
+    left_crop_l2r = Column(Integer)
+    right_crop_l2r = Column(Integer)
+    left_crop_r2l = Column(Integer)
+    right_crop_r2l = Column(Integer)
 
     camera_calibration = relationship("CameraCalibration", back_populates="speed_calibrations")
     vehicle_detections = relationship("VehicleDetection", back_populates="speed_calibration", cascade="all, delete-orphan")

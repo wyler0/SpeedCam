@@ -18,9 +18,9 @@ from database import get_default_session_factory
 from custom_enums import VehicleDirection, EstimationStatus
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+console_handler.setLevel(logging.ERROR)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
@@ -57,13 +57,13 @@ class Estimator:
 
     def run_estimation_loop(self, stop_signal: multiprocessing.Event):
         self.optical_flow_detector: OpticalFlowDetector = flow_registry[self.config.optical_flow_estimator]()
-        while not stop_signal.is_set():
-            with get_default_session_factory().get_db_with() as db:
+        with get_default_session_factory().get_db_with() as db:
+            while not stop_signal.is_set():
                 self.process_pending_vehicles(db)
-            time.sleep(1)  # Adjust sleep time as needed
+                time.sleep(1)  # Adjust sleep time as needed
         
-        # Process any remaining vehicles
-        self.process_pending_vehicles(db)
+            # Process any remaining vehicles
+            self.process_pending_vehicles(db)
         
         logger.info("Stopping estimation loop")
 
@@ -88,14 +88,14 @@ class Estimator:
         # Load events data
         vehicle: TrackedVehicle = self.load_events_data(vehicle_model.events_data_path)
         event_images = self.load_event_images([i.image_path for i in vehicle.events])
-        logger.info(f"Loaded {len(event_images)} event images for vehicle {vehicle.vehicle_id}")
+        logger.debug(f"Loaded {len(event_images)} event images for vehicle {vehicle.vehicle_id}")
         
         # Compute pixel speed estimate
-        logger.info(f"Estimating pixel speed for vehicle {vehicle.vehicle_id}...")
+        logger.debug(f"Estimating pixel speed for vehicle {vehicle.vehicle_id}...")
         pixel_speed = self.run_optical_flow(vehicle.events, event_images)
         
         # Convert to world speed if not calibrating
-        logger.info(f"Estimating world speed for vehicle {vehicle.vehicle_id}...")
+        logger.debug(f"Estimating world speed for vehicle {vehicle.vehicle_id}...")
         world_speed = None
         if not self.config.is_calibration:
             world_speed = self.convert_pixel_speed_to_world_speed(pixel_speed, vehicle.direction)
@@ -106,7 +106,7 @@ class Estimator:
         vehicle_model.estimation_status = EstimationStatus.SUCCESS
         db.commit()
         
-        logger.info(f"Successfully estimated speed for vehicle {vehicle.vehicle_id}")
+        logger.debug(f"Successfully estimated speed for vehicle {vehicle.vehicle_id}")
 
     def run_optical_flow(self, events: List[TrackedVehicleEvent], event_images: List[np.ndarray]) -> float:
         if len(events) < 2 or len(event_images) < 2:
@@ -151,7 +151,7 @@ class Estimator:
                     # Compute average flow magnitude
                     flow_magnitude = np.mean(np.linalg.norm(filtered_flow[:, 2:], axis=1))
                     total_flow += flow_magnitude
-                    logger.info(f"Flow magnitude: {flow_magnitude}")
+                    #logger.debug(f"Flow magnitude: {flow_magnitude}")
                     valid_flow_count += 1
 
         if valid_flow_count > 0:

@@ -16,11 +16,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 import { EyeIcon, FilterIcon, CalendarIcon } from '@/components/custom/icons';
 
 import { Detection, Direction, PredefinedFilterType, VehicleDetectionFilters } from '@/services/vehicleDetectionService';
 import { SpeedCalibration } from '@/services/detectionStatusService';
+
+// Add these imports at the top of the file
+import { saveAs } from 'file-saver';
+import JSZip from 'jszip';
+import { BASE_URL } from '@/api/endpoints';
 
 interface DetectedVehiclesProps {
   detections: Detection[];
@@ -33,6 +39,34 @@ interface DetectedVehiclesProps {
   calibrations: SpeedCalibration[];
   fetchCalibrationIds: () => Promise<void>;
 }
+
+// Add these utility functions after the imports and before the DetectedVehicles component
+
+const convertToCSV = (data: Detection[]): string => {
+  const headers = ['Time', 'Camera', 'Speed (MPH)', 'Speed (Pixels)', 'Direction', 'Image Directory'];
+  const rows = data
+    .filter(d => d.pixel_speed_estimate !== null)
+    .map(d => [
+      d.detection_date,
+      d.speed_calibration_id,
+      d.real_world_speed_estimate,
+      d.pixel_speed_estimate,
+      d.direction === Direction.leftToRight ? 'Left to Right' : 'Right to Left',
+      `images/${d.id}`
+    ]);
+  
+  return [
+    headers.join(','),
+    ...rows.map(r => r.join(','))
+  ].join('\n');
+};
+
+const exportToCSV = (data: Detection[]) => {
+  const csv = convertToCSV(data);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const filename = `detected_vehicles_${new Date().toISOString()}.csv`;
+  saveAs(blob, filename);
+};
 
 export function DetectedVehicles({
   detections,
@@ -47,6 +81,8 @@ export function DetectedVehicles({
 }: DetectedVehiclesProps) {
   const [tempFilters, setTempFilters] = useState<VehicleDetectionFilters>({});
   const [isOpen, setIsOpen] = useState(false);
+  const [detectionImages, setDetectionImages] = useState<{ [id: number]: string[] }>({});
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   const memoizedDetections = useMemo(() => detections, [detections]);
 
@@ -76,6 +112,29 @@ export function DetectedVehicles({
   useEffect(() => {
     setTempFilters(filters);
   }, [filters]);
+
+  useEffect(() => {
+    const fetchDetectionImages = async () => {
+      const newDetectionImages: { [id: number]: string[] } = {};
+      for (const detection of memoizedDetections) {
+        if (detection.thumbnail_path) {
+          try {
+            const thumbnailResponse = await fetch(`${BASE_URL}/${detection.thumbnail_path}`);
+            if (!thumbnailResponse.ok) throw new Error('Failed to fetch image paths');
+            const imagePaths: string[] = await thumbnailResponse.json();
+            
+            const fetchedImages = imagePaths.map(path => `${BASE_URL}${path}`);
+            newDetectionImages[detection.id] = fetchedImages;
+          } catch (error) {
+            console.error('Error fetching detection images:', error);
+          }
+        }
+      }
+      setDetectionImages(newDetectionImages);
+    };
+
+    fetchDetectionImages();
+  }, [memoizedDetections]);
 
   const handleFilterChange = (key: string, value: any) => {
     setTempFilters(prev => {
@@ -139,6 +198,50 @@ export function DetectedVehicles({
       // Reset temporary filters when closing without applying
       setTempFilters(filters);
     }
+  };
+
+  // In the DetectedVehicles component, add this function:
+
+  const handleExport = () => {
+    if (memoizedDetections.length > 0) {
+      setIsExportDialogOpen(true);
+    } else {
+      console.log('No data to export');
+    }
+  };
+
+  const handleExportConfirm = async (includeImages: boolean) => {
+    setIsExportDialogOpen(false);
+    const zip = new JSZip();
+
+    // Prepare CSV data
+    const csv = convertToCSV(memoizedDetections);
+    zip.file("detected_vehicles.csv", csv);
+
+    if (includeImages) {
+      for (const detection of memoizedDetections) {
+        if (detectionImages[detection.id]) {
+          const detectionFolder = zip.folder(`images/${detection.id}`);
+          const sortedImages = [...detectionImages[detection.id]].sort((a, b) => {
+            const timestampA = Number(a.split('/')[5].split('_')[0]);
+            const timestampB = Number(b.split('/')[5].split('_')[0]);
+            return timestampA - timestampB;
+          });
+
+          for (let i = 0; i < sortedImages.length; i++) {
+            const imageUrl = sortedImages[i];
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const timestamp = imageUrl.split('/')[5].split('_')[0];
+            detectionFolder?.file(`${timestamp}_${i}.jpg`, blob);
+          }
+        }
+      }
+    }
+
+    const content = await zip.generateAsync({type: "blob"});
+    const filename = `detected_vehicles_${includeImages ? 'with_images_' : ''}${new Date().toISOString()}.zip`;
+    saveAs(content, filename);
   };
 
   return (
@@ -305,7 +408,7 @@ export function DetectedVehicles({
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button size="sm">Export</Button>
+              <Button size="sm" onClick={handleExport}>Export</Button>
             </div>
           </div>
         </div>
@@ -384,6 +487,20 @@ export function DetectedVehicles({
           
         </div>
       </CardContent>
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Options</DialogTitle>
+            <DialogDescription>
+              Do you want to include images in the export? This will increase the file size.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => handleExportConfirm(false)}>Export without Images</Button>
+            <Button onClick={() => handleExportConfirm(true)}>Export with Images</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -2,7 +2,7 @@
 
 from typing import List, Tuple
 from pydantic import BaseModel
-from sklearn.cluster import DBSCAN
+#from sklearn.cluster import DBSCAN
 import numpy as np
 from scipy.spatial.distance import cdist
 
@@ -337,36 +337,36 @@ class OpenCVOpticalFlowDetectorLucasKanade(OpticalFlowDetector):
 
         return flows
     
-    def group_flows(self, flows: List[np.ndarray]) -> List[List[np.ndarray]]:
-        """
-        Group flows into event groups, ensuring flows in different directions are never grouped together.
-        """
-        final_groups = []
-        for frame_flows in flows:
-            groups = []
-            frame_flows = np.array(frame_flows)
+    # def group_flows(self, flows: List[np.ndarray]) -> List[List[np.ndarray]]:
+    #     """
+    #     Group flows into event groups, ensuring flows in different directions are never grouped together.
+    #     """
+    #     final_groups = []
+    #     for frame_flows in flows:
+    #         groups = []
+    #         frame_flows = np.array(frame_flows)
             
-            # 1. Magnitude-based filtering
-            magnitudes = np.linalg.norm(frame_flows[:, 2:], axis=1)
-            significant_flows = frame_flows[magnitudes > self.params.MIN_FLOW_MAGNITUDE]
+    #         # 1. Magnitude-based filtering
+    #         magnitudes = np.linalg.norm(frame_flows[:, 2:], axis=1)
+    #         significant_flows = frame_flows[magnitudes > self.params.MIN_FLOW_MAGNITUDE]
             
-            if len(significant_flows) > 0:
-                # 2. Direction-based separation (left vs right)
-                left_flows = significant_flows[significant_flows[:, 2] < 0]
-                right_flows = significant_flows[significant_flows[:, 2] >= 0]
+    #         if len(significant_flows) > 0:
+    #             # 2. Direction-based separation (left vs right)
+    #             left_flows = significant_flows[significant_flows[:, 2] < 0]
+    #             right_flows = significant_flows[significant_flows[:, 2] >= 0]
                 
-                for direction_flows in [left_flows, right_flows]:
-                    if len(direction_flows) > self.params.MIN_FLOW_COUNT:
-                        # 3. Spatial proximity clustering
-                        clusters = self.cluster_by_proximity(direction_flows)
-                        groups.extend(clusters)
+    #             for direction_flows in [left_flows, right_flows]:
+    #                 if len(direction_flows) > self.params.MIN_FLOW_COUNT:
+    #                     # 3. Spatial proximity clustering
+    #                     clusters = self.cluster_by_proximity(direction_flows)
+    #                     groups.extend(clusters)
                 
-                # X. Filter groups based on direction and location
-                # groups = self.filter_groups_by_direction_and_location(groups)
+    #             # X. Filter groups based on direction and location
+    #             # groups = self.filter_groups_by_direction_and_location(groups)
             
-            final_groups.append(groups)
+    #         final_groups.append(groups)
         
-        return final_groups
+    #     return final_groups
     
     # def filter_groups_by_direction_and_location(self, groups):
     #     """
@@ -405,86 +405,86 @@ class OpenCVOpticalFlowDetectorLucasKanade(OpticalFlowDetector):
         
     #     return filtered_left_groups + filtered_right_groups
 
-    def cluster_by_proximity(self, flows: np.ndarray) -> List[np.ndarray]:
-        """
-        Cluster flows based on spatial proximity, with more flexibility on the x-axis.
-        Ensures each flow is only added to one group.
-        """
-        if len(flows) == 0:
-            return []
+    # def cluster_by_proximity(self, flows: np.ndarray) -> List[np.ndarray]:
+    #     """
+    #     Cluster flows based on spatial proximity, with more flexibility on the x-axis.
+    #     Ensures each flow is only added to one group.
+    #     """
+    #     if len(flows) == 0:
+    #         return []
 
-        # Calculate weighted coordinates
-        weighted_coords = np.column_stack((
-            flows[:, 0] * self.params.X_WEIGHT,
-            flows[:, 1] * self.params.Y_WEIGHT
-        ))
+    #     # Calculate weighted coordinates
+    #     weighted_coords = np.column_stack((
+    #         flows[:, 0] * self.params.X_WEIGHT,
+    #         flows[:, 1] * self.params.Y_WEIGHT
+    #     ))
 
-        # Use DBSCAN for clustering
-        dbscan = DBSCAN(
-            eps=self.params.MAX_DISTANCE_FROM_CENTER,
-            min_samples=self.params.MIN_FLOW_COUNT,
-            metric='euclidean'
-        )
-        cluster_labels = dbscan.fit_predict(weighted_coords)
+    #     # Use DBSCAN for clustering
+    #     dbscan = DBSCAN(
+    #         eps=self.params.MAX_DISTANCE_FROM_CENTER,
+    #         min_samples=self.params.MIN_FLOW_COUNT,
+    #         metric='euclidean'
+    #     )
+    #     cluster_labels = dbscan.fit_predict(weighted_coords)
 
-        # Group flows by cluster label
-        clusters = []
-        for label in set(cluster_labels):
-            if label != -1:  # -1 is the label for noise points
-                cluster = flows[cluster_labels == label]
-                clusters.append(cluster)
+    #     # Group flows by cluster label
+    #     clusters = []
+    #     for label in set(cluster_labels):
+    #         if label != -1:  # -1 is the label for noise points
+    #             cluster = flows[cluster_labels == label]
+    #             clusters.append(cluster)
 
-        return clusters
+    #     return clusters
     
-    def visualize_flow_groups(self, flow_groups: List[List[np.ndarray]], frames: List[np.ndarray], output_path: str = None, opacity: float = 0.8) -> List[str]:
-        """
-        Generate a visual representation of the optical flow groups with reduced opacity.
+    # def visualize_flow_groups(self, flow_groups: List[List[np.ndarray]], frames: List[np.ndarray], output_path: str = None, opacity: float = 0.8) -> List[str]:
+    #     """
+    #     Generate a visual representation of the optical flow groups with reduced opacity.
         
-        Args:
-            flow_groups (List[List[np.ndarray]]): List of optical flow vector groups.
-            frames (List[np.ndarray]): List of input frames.
-            output_path (str, optional): Path to save the visualization. If None, don't save.
-            opacity (float, optional): Opacity of the flow vectors (0.0 to 1.0). Default is 0.3.
+    #     Args:
+    #         flow_groups (List[List[np.ndarray]]): List of optical flow vector groups.
+    #         frames (List[np.ndarray]): List of input frames.
+    #         output_path (str, optional): Path to save the visualization. If None, don't save.
+    #         opacity (float, optional): Opacity of the flow vectors (0.0 to 1.0). Default is 0.3.
         
-        Returns:
-            List[str]: List of paths to the saved visualization images.
-        """
-        colors = [
-            (255, 0, 0),   # Red
-            (0, 255, 0),   # Green
-            (0, 0, 255),   # Blue
-            (255, 255, 0), # Yellow
-            (0, 255, 255), # Cyan
-            (255, 0, 255), # Magenta
-            (128, 0, 0),   # Maroon
-            (0, 128, 0),   # Dark Green
-            (0, 0, 128),   # Navy
-            (128, 128, 0)  # Olive
-        ]
+    #     Returns:
+    #         List[str]: List of paths to the saved visualization images.
+    #     """
+    #     colors = [
+    #         (255, 0, 0),   # Red
+    #         (0, 255, 0),   # Green
+    #         (0, 0, 255),   # Blue
+    #         (255, 255, 0), # Yellow
+    #         (0, 255, 255), # Cyan
+    #         (255, 0, 255), # Magenta
+    #         (128, 0, 0),   # Maroon
+    #         (0, 128, 0),   # Dark Green
+    #         (0, 0, 128),   # Navy
+    #         (128, 128, 0)  # Olive
+    #     ]
 
-        paths = []
-        for i, frame_groups in enumerate(flow_groups):
-            img = frames[i+1].copy()
-            overlay = np.zeros_like(img)
+    #     paths = []
+    #     for i, frame_groups in enumerate(flow_groups):
+    #         img = frames[i+1].copy()
+    #         overlay = np.zeros_like(img)
             
-            for c, flow in enumerate(frame_groups):    
-                color = colors[c % len(colors)]
-                for x, y, dx, dy in flow:
-                    x, y, dx, dy = map(int, [x, y, dx, dy])
-                    # Increase arrow size by multiplying dx and dy
-                    cv.arrowedLine(overlay, (x, y), (x + dx*2, y + dy*2), color, 2, tipLength=0.3)
+    #         for c, flow in enumerate(frame_groups):    
+    #             color = colors[c % len(colors)]
+    #             for x, y, dx, dy in flow:
+    #                 x, y, dx, dy = map(int, [x, y, dx, dy])
+    #                 # Increase arrow size by multiplying dx and dy
+    #                 cv.arrowedLine(overlay, (x, y), (x + dx*2, y + dy*2), color, 2, tipLength=0.3)
 
-            # Reduce opacity for the overlay
-            opacity = 0.4  # Adjust this value as needed (0.0 to 1.0)
-            result = cv.addWeighted(overlay, opacity, img, 1 - opacity, 0)
+    #         # Reduce opacity for the overlay
+    #         opacity = 0.4  # Adjust this value as needed (0.0 to 1.0)
+    #         result = cv.addWeighted(overlay, opacity, img, 1 - opacity, 0)
 
-            # Write images
-            if output_path:
-                path = f'{output_path}_{i}.png'
-                cv.imwrite(path, result)
-                paths.append(path)
+    #         # Write images
+    #         if output_path:
+    #             path = f'{output_path}_{i}.png'
+    #             cv.imwrite(path, result)
+    #             paths.append(path)
 
-        return paths
+    #     return paths
     
     def visualize_flow(self, flow: List[np.ndarray], frames: List[np.ndarray], output_path: str = None) -> None:
         """

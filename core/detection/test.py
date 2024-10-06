@@ -339,7 +339,7 @@ class TestSpeedEstimator(unittest.TestCase):
         with get_default_session_factory().get_db_with() as db:
             db.commit()
     
-    def Xtest_speed_estimation_one_vehicle(self):
+    def test_speed_estimation_one_vehicle(self):
         # Setup DB and Config and Estimator
         self.state = self.setup_db("data/test_data/videos/07_08_2024/split_1.mp4")
         self.config = DetectorConfig()
@@ -387,7 +387,7 @@ class TestSpeedEstimator(unittest.TestCase):
         self.assertIn(VehicleDirection.LEFT_TO_RIGHT, directions)
         self.assertIn(VehicleDirection.RIGHT_TO_LEFT, directions)
         
-    def Xtest_speed_estimation_early_stop(self):
+    def test_speed_estimation_early_stop(self):
         # Setup DB and Config and Estimator
         self.state = self.setup_db("data/test_data/videos/07_08_2024/split_additional_frames.mp4")
         self.config = DetectorConfig()

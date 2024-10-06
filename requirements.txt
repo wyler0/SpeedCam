@@ -9,3 +9,5 @@ opencv-python
 pygrabber==0.2
 pyobjc
 scipy
+ultralytics
+filterpy

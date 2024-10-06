@@ -39,6 +39,10 @@ class SpeedCalibrationBase(BaseModel):
     valid: bool = Field(default=False)
     left_to_right_constant: Optional[float] = None
     right_to_left_constant: Optional[float] = None
+    left_crop_l2r: Optional[int] = None
+    right_crop_l2r: Optional[int] = None
+    left_crop_r2l: Optional[int] = None
+    right_crop_r2l: Optional[int] = None
 
 class SpeedCalibrationCreate(SpeedCalibrationBase):
     pass
@@ -51,6 +55,16 @@ class SpeedCalibrationUpdate(BaseModel):
     valid: Optional[bool] = None
     left_to_right_constant: Optional[float] = None
     right_to_left_constant: Optional[float] = None
+    left_crop_l2r: Optional[int] = None
+    right_crop_l2r: Optional[int] = None
+    left_crop_r2l: Optional[int] = None
+    right_crop_r2l: Optional[int] = None
+    
+class SpeedCalibrationCropPercentages(BaseModel):
+    left_crop_l2r: Optional[float] = None
+    right_crop_l2r: Optional[float] = None
+    left_crop_r2l: Optional[float] = None
+    right_crop_r2l: Optional[float] = None
 
 class SpeedCalibration(SpeedCalibrationBase):
     id: int

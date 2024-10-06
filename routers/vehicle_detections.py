@@ -9,6 +9,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from database import get_db
+from custom_enums import EstimationStatus
 import models, schemas
 from config import DETECTIONS_DATA_PATH
 
@@ -31,6 +32,7 @@ async def list_vehicle_detections(
 ):
     query = db.query(models.VehicleDetection)
     query = query.filter(models.VehicleDetection.speed_calibration_id == speed_calibration_id)
+    query = query.filter(models.VehicleDetection.estimation_status == EstimationStatus.SUCCESS)
     
     if predefined_filter:
         now = datetime.utcnow()

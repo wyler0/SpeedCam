@@ -2,7 +2,7 @@
 
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import toast from 'react-hot-toast'
 
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,7 @@ import { LatestDetectionImage } from "@/components/custom/latest-detection-image
 import { DetectionStatusCalibrationToggle } from "@/components/custom/detection-status-calibration"
 import { useCalibrationStatusService } from '@/services/detectionStatusCalibrationService'
 import { Direction, Detection, VehicleDetectionFilters } from '@/services/vehicleDetectionService'
+import { getEndpoint } from '@/api/endpoints'
 
 import { BASE_URL } from '@/api/endpoints'
 
@@ -38,11 +39,11 @@ export function SpeedCalibrationAdd({
   deleteDetection,
   onClose,
   onCalibrationAdded,
-  speedCalibrationId, // Moved speedCalibrationId to the destructured props
+  speedCalibrationId,
 }: SpeedCalibrationAddProps & {
   onClose: () => void;
   onCalibrationAdded: () => void;
-  speedCalibrationId: number; // Added speedCalibrationId to the destructured props
+  speedCalibrationId: number;
 }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,6 +53,12 @@ export function SpeedCalibrationAdd({
   const [currentImageIndex, setCurrentImageIndex] = useState<{ [detectionId: number]: number }>({})
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [calibrationName, setCalibrationName] = useState("Enter Calibration Name Here")
+  const [cropValues, setCropValues] = useState({
+    left_crop_l2r: 25,
+    right_crop_l2r: 75,
+    left_crop_r2l: 25,
+    right_crop_r2l: 75,
+  });
   
   const { uploadCalibrationVideo, processingVideo, submitSpeedCalibration } = useCalibrationStatusService();
 
@@ -82,9 +89,9 @@ export function SpeedCalibrationAdd({
             );
             // Step 4: Sort images by detection date using the names from imagePaths
             fetchedImages.sort((a, b) => {
-              const dateA = new Date(Number(a.name.split('_')[0].split('images/')[1])*1000)
-              const dateB = new Date(Number(b.name.split('_')[0].split('images/')[1])*1000)
-              return dateA.getTime() - dateB.getTime();
+              const timestampA = Number(a.name.split('/')[5].split('_')[0]); //        "name": "/detections/2/2/bboxes/104_3.433.jpg"
+              const timestampB = Number(b.name.split('/')[5].split('_')[0]);
+              return timestampA - timestampB;
             });
 
             setDetectionImages(prev => ({ ...prev, [detection.id]: fetchedImages.map(image => image.url) }));
@@ -189,6 +196,34 @@ export function SpeedCalibrationAdd({
   const totalVehicles = detections.length
   const vehiclesWithSpeed = detections.filter((vehicle) => vehicle.real_world_speed !== null).length
 
+  const handleCropChange = useCallback((newCropValues: typeof cropValues) => {
+    setCropValues(newCropValues);
+    updateCropValuesOnBackend(newCropValues);
+  }, []);
+
+  const updateCropValuesOnBackend = async (newCropValues: typeof cropValues) => {
+    try {
+      const response = await fetch(getEndpoint('UPDATE_SPEED_CALIBRATION_CROP').replace('{calibration_id}', speedCalibrationId.toString()), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          left_crop_l2r: Math.round(newCropValues.left_crop_l2r),
+          right_crop_l2r: Math.round(newCropValues.right_crop_l2r),
+          left_crop_r2l: Math.round(newCropValues.left_crop_r2l),
+          right_crop_r2l: Math.round(newCropValues.right_crop_r2l),
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update crop values');
+      }
+    } catch (error) {
+      console.error('Error updating crop values:', error);
+      toast.error('Failed to update crop values');
+    }
+  };
+
   return (
     <>
       <Card className="w-[800px] max-h-[90vh] flex flex-col">
@@ -211,21 +246,25 @@ export function SpeedCalibrationAdd({
           <DetectionStatusCalibrationToggle />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="col-span-2 md:col-span-1">
-              <LatestDetectionImage />
+              <LatestDetectionImage
+                allowCropAdjustment={true}
+                onCropChange={handleCropChange}
+                cropValues={cropValues}
+              />
             </div>
-            <div className="grid gap-4">
-              <div className="flex items-center justify-between">
+            <div className="col-span-2 md:col-span-1">
+              <h4 className="text-lg font-semibold mb-2">Crop Values</h4>
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <div className="text-sm font-medium">Total Vehicles</div>
-                  <div className="text-2xl font-semibold">{totalVehicles}</div>
+                  <p>Left to Right:</p>
+                  <p>Left: {cropValues.left_crop_l2r.toFixed(2)}%</p>
+                  <p>Right: {cropValues.right_crop_l2r.toFixed(2)}%</p>
                 </div>
                 <div>
-                  <div className="text-sm font-medium">With Speed Data</div>
-                  <div className="text-2xl font-semibold">{vehiclesWithSpeed}</div>
+                  <p>Right to Left:</p>
+                  <p>Left: {cropValues.left_crop_r2l.toFixed(2)}%</p>
+                  <p>Right: {cropValues.right_crop_r2l.toFixed(2)}%</p>
                 </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Enter the known speed for each vehicle and click "Submit Calibration" to provide the data for calibration.
               </div>
             </div>
           </div>

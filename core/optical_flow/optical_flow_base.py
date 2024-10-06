@@ -22,25 +22,25 @@ class OpticalFlowDetector(ABC):
         """
         raise NotImplementedError("Flow computation method not implemented.")
 
-    @abstractmethod
-    def group_flows(self, flows: List[np.ndarray]) -> List[List[np.ndarray]]:
-        """
-        Group flows into event groups.
-        """
-        raise NotImplementedError("Group flows method not implemented.")
+    # @abstractmethod
+    # def group_flows(self, flows: List[np.ndarray]) -> List[List[np.ndarray]]:
+    #     """
+    #     Group flows into event groups.
+    #     """
+    #     raise NotImplementedError("Group flows method not implemented.")
     
-    @abstractmethod
-    def visualize_flow_groups(self, flow: List[List[np.ndarray]], frames: List[np.ndarray], output_path: str = None) -> List[str]:
-        """
-        Generate a visual representation of the optical flow.
+    # @abstractmethod
+    # def visualize_flow_groups(self, flow: List[List[np.ndarray]], frames: List[np.ndarray], output_path: str = None) -> List[str]:
+    #     """
+    #     Generate a visual representation of the optical flow.
         
-        Args:
-            output_path (str, optional): Path to save the visualization. If None, don't save.
+    #     Args:
+    #         output_path (str, optional): Path to save the visualization. If None, don't save.
         
-        Returns:
-            np.ndarray: Visualization of the optical flow.
-        """
-        raise NotImplementedError("Visualization method not implemented.")
+    #     Returns:
+    #         np.ndarray: Visualization of the optical flow.
+    #     """
+    #     raise NotImplementedError("Visualization method not implemented.")
     
     @abstractmethod
     def visualize_flow(self, flow: List[np.ndarray], frames: List[np.ndarray], output_path: str = None) -> None:

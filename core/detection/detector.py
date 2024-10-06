@@ -1,6 +1,6 @@
 # © 2024 Wyler Zahm. All rights reserved.
 
-from typing import Literal, Optional, List, Tuple, Union
+from typing import Literal, Optional, List, Tuple, Union, Dict
 from datetime import datetime, timedelta
 import os
 import logging
@@ -10,6 +10,7 @@ import shutil
 import json
 
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 from pydantic import BaseModel
 import numpy as np
 import cv2
@@ -31,18 +32,19 @@ from config import DETECTIONS_DATA_PATH, LATEST_DETECTION_IMAGE_PATH, TEMP_DATA_
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+console_handler.setLevel(logging.ERROR)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 """
 #TODO:
-    - [ ] make sure not to estimate world speed when in calibration mode in the detector
-    - [ ] test optical flow queue, thread, and processing and db updates
-    - [ ] implement optical flow speed
+    - [ ] Update installation instructions and run instructions
+    - [ ] Fix speed limit API issues
+    - [ ] Fix frontend latest detection image to render the crops correctly (or don't render them at all?)
+    - [ ] Add thumbnails to the table in the frotnend detections view
      
 #WORKFLOW
     - ANY MODE:
@@ -68,8 +70,7 @@ logger.addHandler(console_handler)
         
     - Data Created:
         - frontend visualization image
-        - raw images, saved in temp_data/images
-        - events saved in DETECTIONS_DATA_PATH/{speed_calibration_id}/{vehicle_id}/events.json
+        - events and images saved in DETECTIONS_DATA_PATH/{speed_calibration_id}/{vehicle_id}/... events.json and images/.
 """
 
 class DetectorConfig(BaseModel):
@@ -81,10 +82,10 @@ class DetectorConfig(BaseModel):
     yolo_file_path: str = 'core/models/yolov8n.pt'
     
     #### DETECTION ####
-    LEFT_CROP_l2r: int = 375 # Distance from LHS of frame where detection does not occur
-    RIGHT_CROP_l2r: int = 1450 # Distance from RHS of frame where detection does not occur
-    LEFT_CROP_r2l: int = 0 # Distance from LHS of frame where detection does not occur
-    RIGHT_CROP_r2l: int = 1e9 # Distance from RHS of frame where detection does not occur
+    LEFT_CROP_l2r: int = 0#375 # Distance from LHS of frame where detection does not occur, as percentage of frame width
+    RIGHT_CROP_l2r: int = 100 #1450 # Distance from LHS of frame where detection does not occur, as percentage of frame width
+    LEFT_CROP_r2l: int = 0 # Distance from LHS of frame where detection does not occur, as percentage of frame width
+    RIGHT_CROP_r2l: int = 100 # Distance from LHS of frame where detection does not occur, as percentage of frame width
 
     #### Checks ####
     @staticmethod
@@ -108,6 +109,7 @@ class SpeedDetector():
     model: YOLO = None
     tracker: Sort = None
     target_img: np.ndarray = None
+    id_mapping: Dict[int, int] = {}
     
     ##### INITIALIZATION #####
     def __init__(self, config: DetectorConfig = None):
@@ -167,15 +169,26 @@ class SpeedDetector():
         # Get initial images
         if not self.get_next_image():
             raise Exception("Error loading target video")
+        assert self.target_img is not None, "Error loading target video"
+        
+        # Setup dewarp and crop
+        h, w = self.target_img.shape[:2]
+        
+        self.config.LEFT_CROP_l2r = self.spd_calib.left_crop_l2r/100*w if self.spd_calib.left_crop_l2r is not None else self.config.LEFT_CROP_l2r/100*w
+        self.config.RIGHT_CROP_l2r = self.spd_calib.right_crop_l2r/100*w if self.spd_calib.right_crop_l2r is not None else self.config.RIGHT_CROP_l2r/100*w
+        self.config.LEFT_CROP_r2l = self.spd_calib.left_crop_r2l/100*w if self.spd_calib.left_crop_r2l is not None else self.config.LEFT_CROP_r2l/100*w
+        self.config.RIGHT_CROP_r2l = self.spd_calib.right_crop_r2l/100*w if self.spd_calib.right_crop_r2l is not None else self.config.RIGHT_CROP_r2l/100*w
+
+        newcameramtx, roi= cv2.getOptimalNewCameraMatrix(self.cam_calib.calibration_matrix,self.cam_calib.distortion_coefficients,(w,h),1,(w,h))
+        self.map1, self.map2 = cv2.initUndistortRectifyMap(self.cam_calib.calibration_matrix, self.cam_calib.distortion_coefficients, None, newcameramtx, (w,h), cv2.CV_32FC1)
+
         self.target_img = self.apply_camera_dewarp(self.target_img)
         
-        assert self.target_img is not None, "Error loading target video"
-
         # Setup tracking dict
         self.tracking_dict = {}
 
         # Initialize YOLO model and tracker
-        self.model = YOLO(self.config.yolo_file_path)
+        self.model = YOLO(self.config.yolo_file_path).to('mps')
         self.tracker = Sort(max_age=100, min_hits=3, iou_threshold=0.3)
         
     ##### SETUP ######
@@ -186,7 +199,7 @@ class SpeedDetector():
         
         db_speed_calibration = db.query(models.SpeedCalibration).get(self.state.speed_calibration_id)
         self.spd_calib = schemas.SpeedCalibration.model_validate(db_speed_calibration) if db_speed_calibration else None
-    
+
         if self.spd_calib is None:
             raise Exception(f"Speed calibration not found for id {self.state.speed_calibration_id}.")
 
@@ -274,22 +287,24 @@ class SpeedDetector():
             self.push_image_to_frontend(LATEST_DETECTION_IMAGE_PATH, db)
             
             results, detections = None, None
-            last_read_time = self.video.get_time_sec()
+            
+            last_read_time_wall = time.time()
             
             try:
                 while self.get_next_image() and not stop_signal.is_set():
+                    # Clear detections
                     detections = []
-                    # Update read time delta
-                    read_time_delta = self.video.get_time_sec() - last_read_time
-                    logger.info(f"Read time delta: {read_time_delta}")
-                    last_read_time = self.video.get_time_sec()
                     
                     # Apply dewarping
                     self.target_img = self.apply_camera_dewarp(self.target_img)
+                    
+                    time_a = time.time()
 
                     # Run YOLO detection
-                    results: Results = self.model(self.target_img, conf=0.7, classes=[2, 3])[0]  # Detect cars and trucks
+                    results: Results = self.model(self.target_img, task="detect", conf=0.7, classes=[2, 3], iou=0.5,verbose=False)[0]  # Detect cars and trucks
                     
+                    time_b = time.time()
+                
                     if len(results) > 0:
                         # Visualize events, push to frontend
                         img_path = f"{self.temp_images_path}/{time.time()}_visualized.jpg"
@@ -298,13 +313,10 @@ class SpeedDetector():
                             boxes=True, masks=False, probs=False, show=False, save=True, filename=img_path,
                         )
                         self.push_image_to_frontend(img_path, db)
-                        
-                        # Store event frame for estimation later
-                        raw_img_path = f"{self.temp_images_path}/{time.time()}_raw.jpg"
-                        cv2.imwrite(raw_img_path, self.target_img)
-                        
+
                         # Process detections
                         detections = self.process_detections(results)
+                        
 
                     # Update tracker
                     tracked_objects = self.tracker.update(detections if detections is not None else [])
@@ -314,10 +326,15 @@ class SpeedDetector():
                         self.process_tracked_objects(tracked_objects)
 
                     # Check for finished events
-                    self.check_finished_and_stale_events(db, read_time_delta=read_time_delta)
+                    self.check_finished_and_stale_events(db)
+                    
+                    # Debug time deltas
+                    new_read_time_wall = time.time()
+                    logger.debug(f"Overall: {new_read_time_wall - last_read_time_wall: .4f}, YOLO: {time_b - time_a: .4f}, FPS: {1 / (new_read_time_wall - last_read_time_wall): .4f}")
+                    last_read_time_wall = new_read_time_wall
 
                 # Check for finished events
-                self.check_finished_and_stale_events(db, final=True, read_time_delta=read_time_delta)
+                self.check_finished_and_stale_events(db, final=True)
                 end_time = time.time()
                 logger.info(f"Total time: {end_time - start_time}")
                 
@@ -338,15 +355,8 @@ class SpeedDetector():
     #### PROCESSING UTILITIES ####
 
     def apply_camera_dewarp(self, img):
-        h, w = img.shape[:2]
-        
-        #TODO Might be able to store this step instead of computing every time. I think it scales in case the original image is different w/h from the original matrix.
-        newcameramtx, roi= cv2.getOptimalNewCameraMatrix(self.cam_calib.calibration_matrix,self.cam_calib.distortion_coefficients,(w,h),1,(w,h))
-
         # Apply undistortion and Crop to ROI
-        dst = cv2.undistort(img, self.cam_calib.calibration_matrix, self.cam_calib.distortion_coefficients, None, newcameramtx)
-        #x, y, w, h = roi
-        #dst = dst[y:y+h, x:x+w]
+        dst = cv2.remap(img, self.map1, self.map2, cv2.INTER_LINEAR)
         return dst
     
     def get_direction_estimate(self, events: List[TrackedVehicleEvent]):
@@ -411,26 +421,45 @@ class SpeedDetector():
                 image_path=None  # We'll set this after saving the image
             )
             
-            # Check if vehicle with that id exists
-            if obj_id not in self.tracking_dict:
-                self.tracking_dict[obj_id] = TrackedVehicle(
+            # Check if we have a mapping for this tracker ID
+            if obj_id not in self.id_mapping:
+                # If not, create a new database entry and get its ID
+                with get_default_session_factory().get_db_with() as db:
+                    new_vehicle = models.VehicleDetection(
+                        detection_date=func.now(),
+                        speed_calibration_id=self.state.speed_calibration_id,
+                        estimation_status=EstimationStatus.FAILED
+                    )
+                    db.add(new_vehicle)
+                    db.flush()  # This will assign an ID to new_vehicle
+                    db.commit()
+                    self.id_mapping[obj_id] = new_vehicle.id
+
+            db_id = self.id_mapping[obj_id]
+            
+            # Check if vehicle with that id exists in tracking dict
+            if db_id not in self.tracking_dict:
+                self.tracking_dict[db_id] = TrackedVehicle(
                     events=[], 
-                    vehicle_id=obj_id,
+                    vehicle_id=db_id,
                     start_time=self.video.get_time_sec(),
                 )
                 
                 # Create vehicle image directory if it doesn't exist
-                os.makedirs(f"{self.detections_data_path}/{int(obj_id)}/images", exist_ok=True)
+                os.makedirs(f"{self.detections_data_path}/{db_id}/bboxes", exist_ok=True)
+                os.makedirs(f"{self.detections_data_path}/{db_id}/images", exist_ok=True)
+            vehicle = self.tracking_dict[db_id]
             
-            vehicle = self.tracking_dict[obj_id]
+            # Save the raw image
+            image_filename = f"{self.video.frames_read}_{self.video.get_time_sec():.3f}.jpg"
+            image_path = os.path.join(f"{self.detections_data_path}/{db_id}/images", image_filename)
+            cv2.imwrite(image_path, self.target_img)
             
-            # Draw bounding box on the image
+            # Save bbox image
             final_img = self.target_img.copy()
             cv2.rectangle(final_img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-            
-            # Save the image with bounding box
             image_filename = f"{self.video.frames_read}_{self.video.get_time_sec():.3f}.jpg"
-            image_path = os.path.join(f"{self.detections_data_path}/{int(obj_id)}/images", image_filename)
+            image_path = os.path.join(f"{self.detections_data_path}/{db_id}/bboxes", image_filename)
             cv2.imwrite(image_path, final_img)
             
             # Update the event's image path
@@ -442,8 +471,7 @@ class SpeedDetector():
             if not vehicle.direction and len(vehicle.events) > 1:
                 vehicle.direction = self.get_direction_estimate(vehicle.events)
 
-    def check_finished_and_stale_events(self, db: Session, final=False, read_time_delta=-1,
-                                        MAX_MS_SINCE_LAST_EVENT=1000, MAX_VEHILCE_TOTAL_ELPASED_MS=4000):
+    def check_finished_and_stale_events(self, db: Session, final=False, MAX_MS_SINCE_LAST_EVENT=1000, MAX_VEHILCE_TOTAL_ELPASED_MS=4000):
         """ Finds ongoing tracked vehicles that have exited the frame. Finishes all open events if final is true. 
         args:
             read_time_delta: Time delta since last read in seconds. Used to scale the time deltas for the comparison based on effective frame rate.
@@ -452,7 +480,7 @@ class SpeedDetector():
             MAX_VEHILCE_TOTAL_ELPASED_MS: Maximum time a vehicle can be considered still ongoing from its first detection.
         """
         # Scale delta based thresholds by read_time_delta
-        MAX_MS_SINCE_LAST_EVENT *= read_time_delta/0.06 # Roughly give the vehicle twenty five read opportunities for a detection. This handles most large occlusions (e.g., trees.)
+        #MAX_MS_SINCE_LAST_EVENT *= read_time_delta/0.06 # Roughly give the vehicle twenty five read opportunities for a detection. This handles most large occlusions (e.g., trees.)
         
         # If data complete, move all tracked vehicles to finalized
         finished_vehicles = {}
@@ -479,11 +507,11 @@ class SpeedDetector():
         # Remove finished vehicles
         self.tracking_dict = {k: v for k, v in self.tracking_dict.items() if k not in finished_vehicles}
     
-    def finish_tracked_vehicle(self, db: Session, vehicle: TrackedVehicle, read_time_delta=-1, MIN_EVENTS_FOR_VALID=3) -> bool:
+    def finish_tracked_vehicle(self, db: Session, vehicle: TrackedVehicle, MIN_EVENTS_FOR_VALID=3) -> bool:
         vehicle.direction = self.get_direction_estimate(vehicle.events)
         if vehicle.direction == None: 
             logger.warning(f"Vehicle Failed: unable to determine direction for vehicle {vehicle.vehicle_id}")
-            self.cleanup_vehicle_data(vehicle)
+            self.cleanup_vehicle_data(vehicle, db)
             return False
         
         # Apply cropping based on vehicle direction
@@ -497,7 +525,7 @@ class SpeedDetector():
                             and event.bbox[0] <= self.config.RIGHT_CROP_r2l]
         else:
             logger.warning(f"Vehicle Failed: invalid direction for vehicle {vehicle.vehicle_id}")
-            self.cleanup_vehicle_data(vehicle)
+            self.cleanup_vehicle_data(vehicle, db)
             return False
         
         # Delete images associated with removed events
@@ -512,7 +540,7 @@ class SpeedDetector():
         # Check if we have enough events after cropping
         if len(vehicle.events) < MIN_EVENTS_FOR_VALID:
             logger.warning(f"Vehicle Failed: not enough events after cropping for vehicle {vehicle.vehicle_id} with {len(vehicle.events)} events and a threshold of {MIN_EVENTS_FOR_VALID}")
-            self.cleanup_vehicle_data(vehicle)
+            self.cleanup_vehicle_data(vehicle, db)
             return False
         
         vehicle.elapsed_time = vehicle.events[-1].event_time - vehicle.start_time
@@ -520,37 +548,25 @@ class SpeedDetector():
         # Write events to disk
         events_data_path = self.write_events_data(vehicle)
         
-        # Write vehicle to database
-        new_tracking_data = models.VehicleDetection(
-            detection_date = datetime.now() - timedelta(seconds=2),
-            thumbnail_path = None,
-            events_data_path = events_data_path,
-            direction = vehicle.direction,
-            pixel_speed_estimate = None,
-            real_world_speed_estimate = None,
-            real_world_speed = None,
-            confidence = None,
-            estimation_status = EstimationStatus.PENDING,
-            speed_calibration_id = self.state.speed_calibration_id,
-        )
+        # Get thumbnail
+        middle_index = len(vehicle.events) // 2
+
+        # Update existing database entry instead of creating a new one
+        db_vehicle = db.query(models.VehicleDetection).get(vehicle.vehicle_id)
+        if db_vehicle is None:
+            logger.warning(f"Vehicle {vehicle.vehicle_id} not found in database")
+            return False
+
+        db_vehicle.thumbnail_path = f"{self.detections_data_path}/{vehicle.vehicle_id}/bboxes"
+        db_vehicle.events_data_path = events_data_path
+        db_vehicle.direction = vehicle.direction
+        db_vehicle.estimation_status = EstimationStatus.PENDING
         
-        db.add(new_tracking_data)
         db.commit()
         
         logger.info(f"Finished tracking vehicle {vehicle.vehicle_id}... queued for estimation.")
         
         return True
-    
-    def add_tracked_vehicle(self):
-        # Get new vehicle ID
-        vehicle_id = next((i for i in range(len(self.tracking_dict) + 1) if i not in self.tracking_dict), len(self.tracking_dict))
-        
-        # Add new vehicle to tracking dict
-        self.tracking_dict[vehicle_id] = TrackedVehicle(
-            vehicle_id=vehicle_id,
-            start_time=self.video.get_time_sec()
-        )
-        return vehicle_id
 
     #### UTILS ####
     
@@ -599,19 +615,21 @@ class SpeedDetector():
         return TrackedVehicle.load_from_events_data(events_data_path)
     
     
-    def cleanup_vehicle_data(self, vehicle: TrackedVehicle):
-        # Delete all images associated with this vehicle
-        vehicle_image_dir = f"{self.detections_data_path}/{vehicle.vehicle_id}/images"
-        if os.path.exists(vehicle_image_dir):
-            shutil.rmtree(vehicle_image_dir)
-        
-        # Delete the events.json file if it exists
-        events_data_path = f"{self.detections_data_path}/{vehicle.vehicle_id}/events.json"
-        if os.path.exists(events_data_path):
-            os.remove(events_data_path)
-        
+    def cleanup_vehicle_data(self, vehicle: TrackedVehicle, db: Session):
         # Delete the vehicle directory if it's empty
         vehicle_dir = f"{self.detections_data_path}/{vehicle.vehicle_id}"
         if os.path.exists(vehicle_dir) and not os.listdir(vehicle_dir):
-            os.rmdir(vehicle_dir)
-    
+            shutil.rmtree(vehicle_dir)
+        
+        # Delete the database entry
+        db_vehicle = db.query(models.VehicleDetection).get(vehicle.vehicle_id)
+        if db_vehicle:
+            db.delete(db_vehicle)
+            db.commit()
+            logger.debug(f"Deleted database entry for invalid vehicle {vehicle.vehicle_id}")
+        
+        # Remove the mapping
+        for key, value in self.id_mapping.items():
+            if value == vehicle.vehicle_id:
+                del self.id_mapping[key]
+                break
