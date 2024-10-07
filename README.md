@@ -53,7 +53,13 @@ SpeedCam is an advanced vehicle speed detection system that utilizes computer vi
    cd speedcam
    ```
 
-5. Start the application:
+5. Install frontend dependencies:
+   ```
+   cd frontend
+   npm install
+   ```
+
+6. Start the application:
    ```
    npm run dev
    ```
@@ -63,7 +69,7 @@ SpeedCam is an advanced vehicle speed detection system that utilizes computer vi
    - Start the backend server
    - Start the frontend development server
 
-6. Navigate to http://localhost:3000 (or whatever port was used.)
+7. Navigate to http://localhost:3000 in your web browser to access the application.
 
 ## Setup and Usage
 
@@ -90,13 +96,16 @@ Before using the system, you need to create a camera calibration:
     - The image lighting is not bright enough. Turn on an overhead light, or wait for a clear sky day.
 5. Once you have uploaded enough valid images, press save calibration. Your images will be processed a final time and the calibration will be ready for use.
 
-An example of a valid calibration image with rows = 6 and columns = 8, with detected corners marked:
-
-<img src="images/calibration_sample.jpg" width="300" height="200" alt="Sample Calibration Image">
-
-An example screenshot of an in progress camera calibration setup:
-
-<img src="images/cam_calibration_view.png" width="300" alt="Camera Calibration Example">
+<div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div style="margin-right: 20px;">
+        <p>An example screenshot of an in progress camera calibration setup:</p>
+        <img src="images/cam_calibration_view.png" width="300" alt="Camera Calibration Example">    
+    </div>
+    <div>
+        <p>An example of a valid calibration image with rows = 6 and columns = 8, with detected corners marked:</p>
+        <img src="images/calibration_sample.jpg" width="300" height="200" alt="Sample Calibration Image">
+    </div>
+</div>
 
 ### 2. Speed Calibration
 
@@ -166,19 +175,3 @@ Feel free to contribute to this project by submitting pull requests or opening i
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## High-Level Architecture
-
-Our system architecture is designed to efficiently handle three key processes: Detection and Estimation, Camera Calibration, and Speed Calibration. Below are visual representations of these processes along with brief explanations.
-
-### Detection and Estimation Process
-
-![Detection and Estimation Process](images/DetectionEstimationProcess.png)
-
-### Camera Calibration Flow
-
-![Camera Calibration Flow](images/CameraCalibrationFlow.png)
-
-### Speed Calibration Process
-
-![Speed Calibration Process](images/SpeedCalibrationProcess.png)
