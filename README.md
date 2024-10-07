@@ -42,34 +42,54 @@ SpeedCam is an advanced vehicle speed detection system that utilizes computer vi
    brew install python@3.11
    ```
 
-3. Install Node.js:
+3. Install pip (Python package installer):
+   ```
+   curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+   python3 get-pip.py
+   ```
+
+4. Install Node.js:
    ```
    brew install node
    ```
 
-4. Clone the repository:
+5. Clone the repository:
    ```
    git clone https://github.com/your-repo/speedcam.git
    cd speedcam
    ```
 
-5. Install frontend dependencies:
+6. Install frontend dependencies:
    ```
    cd frontend
    npm install
+   cd ..
    ```
 
-6. Start the application:
+7. Set up the Python environment and install backend dependencies:
    ```
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+8. Upgrade the database using Alembic:
+   ```
+   cd .. // From root directory
+   alembic upgrade head
+   ```
+
+9. Start the application:
+   ```
+   cd frontend
    npm run dev
    ```
    This command will:
-   - Create a Python virtual environment
-   - Install Python requirements
    - Start the backend server
    - Start the frontend development server
 
-7. Navigate to http://localhost:3000 in your web browser to access the application.
+10. Navigate to http://localhost:3000 in your web browser to access the application.
 
 ## Setup and Usage
 
