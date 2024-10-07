@@ -4,7 +4,7 @@
 
 SpeedCam is an advanced vehicle speed detection system that utilizes computer vision and machine learning techniques to accurately measure and record vehicle speeds in real-time. This system is designed for traffic monitoring, law enforcement, and road safety applications. AI wrote more than 90% of the code in this project. 
 
-<img src="images/latest_detection_image_view.png" height="600" alt="Latest Detection Image View">
+<img src="images/latest_detection_image_view.png" alt="Latest Detection Image View">
 
 ## How It Works
 
@@ -166,3 +166,19 @@ Feel free to contribute to this project by submitting pull requests or opening i
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## High-Level Architecture
+
+Our system architecture is designed to efficiently handle three key processes: Detection and Estimation, Camera Calibration, and Speed Calibration. Below are visual representations of these processes along with brief explanations.
+
+### Detection and Estimation Process
+
+![Detection and Estimation Process](images/DetectionEstimationProcess.png)
+
+### Camera Calibration Flow
+
+![Camera Calibration Flow](images/CameraCalibrationFlow.png)
+
+### Speed Calibration Process
+
+![Speed Calibration Process](images/SpeedCalibrationProcess.png)
