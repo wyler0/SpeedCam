@@ -32,9 +32,9 @@ from config import DETECTIONS_DATA_PATH, LATEST_DETECTION_IMAGE_PATH, TEMP_DATA_
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.ERROR)
+console_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
@@ -175,6 +175,8 @@ class SpeedDetector():
         self.config.RIGHT_CROP_l2r = self.spd_calib.right_crop_l2r/100*w if self.spd_calib.right_crop_l2r is not None else self.config.RIGHT_CROP_l2r/100*w
         self.config.LEFT_CROP_r2l = self.spd_calib.left_crop_r2l/100*w if self.spd_calib.left_crop_r2l is not None else self.config.LEFT_CROP_r2l/100*w
         self.config.RIGHT_CROP_r2l = self.spd_calib.right_crop_r2l/100*w if self.spd_calib.right_crop_r2l is not None else self.config.RIGHT_CROP_r2l/100*w
+        logger.info(f"L2r Left crop: {self.config.LEFT_CROP_l2r}, Right crop: {self.config.RIGHT_CROP_l2r}")
+        logger.info(f"R2l Left crop: {self.config.LEFT_CROP_r2l}, Right crop: {self.config.RIGHT_CROP_r2l}")
 
         newcameramtx, roi= cv2.getOptimalNewCameraMatrix(self.cam_calib.calibration_matrix,self.cam_calib.distortion_coefficients,(w,h),1,(w,h))
         self.map1, self.map2 = cv2.initUndistortRectifyMap(self.cam_calib.calibration_matrix, self.cam_calib.distortion_coefficients, None, newcameramtx, (w,h), cv2.CV_32FC1)
@@ -512,11 +514,14 @@ class SpeedDetector():
             return False
         
         # Apply cropping based on vehicle direction
+        logger.info(f"ID: {vehicle.vehicle_id}, Direction: {vehicle.direction}")
         if vehicle.direction == VehicleDirection.LEFT_TO_RIGHT:
+            logger.info(f"APPLYING LEFT2RIGHT CROP")
             valid_events = [event for event in vehicle.events 
                             if event.bbox[0] + event.bbox[2] >= self.config.LEFT_CROP_l2r 
                             and event.bbox[0] <= self.config.RIGHT_CROP_l2r]
         elif vehicle.direction == VehicleDirection.RIGHT_TO_LEFT:
+            logger.info(f"APPLYING RIGHT2LEFT CROP")
             valid_events = [event for event in vehicle.events 
                             if event.bbox[0] + event.bbox[2] >= self.config.LEFT_CROP_r2l 
                             and event.bbox[0] <= self.config.RIGHT_CROP_r2l]
