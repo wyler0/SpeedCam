@@ -88,7 +88,7 @@ async def list_vehicle_images(
     vehicle_id: int,
 ):
     # Construct the path to the images directory
-    images_dir = os.path.join(static_dir, calibration_date, str(vehicle_id), "images")
+    images_dir = os.path.join(static_dir, calibration_date, str(vehicle_id), "bboxes")
     # Check if the directory exists
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail="Images directory not found")
