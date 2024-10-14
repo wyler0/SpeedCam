@@ -62,6 +62,10 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
       let photo = camera.current.takePhoto();
       
       const newImage: CapturedImage = { src: photo, status: 'loading', flipped: isCameraFlipped };
+
+      if (isCameraFlipped) {
+        newImage.src = await flipImage(photo);
+      }
       setCapturedImages(prev => [...prev, newImage]);
 
       try {
@@ -107,12 +111,12 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         let imageSrc = URL.createObjectURL(file);
+        const newImage: CapturedImage = { src: imageSrc, status: 'loading', flipped: isCameraFlipped };
         
         if (isCameraFlipped) {
-          imageSrc = await flipImage(imageSrc);
+          newImage.src = await flipImage(imageSrc);
         }
 
-        const newImage: CapturedImage = { src: imageSrc, status: 'loading', flipped: isCameraFlipped };
         setCapturedImages(prev => [...prev, newImage]);
 
         try {
@@ -390,7 +394,7 @@ export function CameraCalibrationAdd({ onClose, onCalibrationAdded }: CameraCali
                   style={{ 
                     aspectRatio: "4/3", 
                     objectFit: "cover", 
-                    transform: img.flipped ? 'scaleX(-1)' : 'none' 
+                    //transform: img.flipped ? 'scaleX(-1)' : 'none' 
                   }}
                 />
                 <div className="absolute top-1 right-1 flex gap-1">

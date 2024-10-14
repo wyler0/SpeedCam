@@ -117,7 +117,7 @@ class SpeedDetector():
 
     def init_video(self) -> VideoStream:
         src = int(self.config.input_video) if isinstance(self.config.input_video, int) or self.config.input_video.isdigit() else self.config.input_video
-        video = VideoStream(src)
+        video = VideoStream(src, WEBCAM_HFLIP=self.cam_calib.horizontal_flip)
         
         assert video.isOpened(), "Could not open video device or file."
         
@@ -175,6 +175,15 @@ class SpeedDetector():
         self.config.RIGHT_CROP_l2r = self.spd_calib.right_crop_l2r/100*w if self.spd_calib.right_crop_l2r is not None else self.config.RIGHT_CROP_l2r/100*w
         self.config.LEFT_CROP_r2l = self.spd_calib.left_crop_r2l/100*w if self.spd_calib.left_crop_r2l is not None else self.config.LEFT_CROP_r2l/100*w
         self.config.RIGHT_CROP_r2l = self.spd_calib.right_crop_r2l/100*w if self.spd_calib.right_crop_r2l is not None else self.config.RIGHT_CROP_r2l/100*w
+        
+        # Swap crops if camera is flipped
+        if self.cam_calib.horizontal_flip:
+            temp = (self.config.LEFT_CROP_l2r, self.config.RIGHT_CROP_l2r)
+            self.config.LEFT_CROP_l2r = self.config.LEFT_CROP_r2l
+            self.config.RIGHT_CROP_l2r = self.config.RIGHT_CROP_r2l
+            self.config.LEFT_CROP_r2l = temp[0]
+            self.config.RIGHT_CROP_r2l = temp[1]
+            
         logger.info(f"L2r Left crop: {self.config.LEFT_CROP_l2r}, Right crop: {self.config.RIGHT_CROP_l2r}")
         logger.info(f"R2l Left crop: {self.config.LEFT_CROP_r2l}, Right crop: {self.config.RIGHT_CROP_r2l}")
 

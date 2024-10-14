@@ -7,6 +7,7 @@ import shutil
 import os
 
 import asyncio
+import cv2
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -114,6 +115,12 @@ async def upload_calibration_image(
     img_id = uuid4().hex
     file_path = f"{CALIBRATION_DATA_PATH}/{calibration_id}/{''.join(file.filename.split('.')[:-1])}_{img_id}.jpg"
     await save_image(file_path, file)
+    
+    if calibration.horizontal_flip:
+        img = cv2.imread(file_path)
+        cv2.flip(img, 1)
+        cv2.imwrite(file_path, img)
+    
     calibration.images_path = f"{CALIBRATION_DATA_PATH}/{calibration_id}"
     db.commit()
     
