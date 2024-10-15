@@ -1,7 +1,7 @@
 // © 2024 Wyler Zahm. All rights reserved.
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { addDays, format } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 
 import { Cell, XAxis, ScatterChart, Scatter, YAxis, ZAxis, Tooltip, Legend } from "recharts"
 import { AlertTriangle } from "lucide-react"
@@ -30,6 +30,7 @@ import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { BASE_URL } from '@/api/endpoints';
 import Image from 'next/image';
+import { Pagination } from "@/components/ui/pagination";
 
 interface DetectedVehiclesProps {
   detections: Detection[];
@@ -86,8 +87,17 @@ export function DetectedVehicles({
   const [isOpen, setIsOpen] = useState(false);
   const [detectionImages, setDetectionImages] = useState<{ [id: number]: string[] }>({});
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // You can adjust this number as needed
 
   const memoizedDetections = useMemo(() => detections, [detections]);
+
+  // Add this memoized sorted detections array
+  const sortedDetections = useMemo(() => {
+    return [...detections]
+      //.filter(detection => detection.real_world_speed_estimate != null)
+      .sort((a, b) => parseISO(b.detection_date).getTime() - parseISO(a.detection_date).getTime());
+  }, [detections]);
 
   useEffect(() => {
     if (speedCalibrationId) {
@@ -257,6 +267,17 @@ export function DetectedVehicles({
       console.error('Error deleting detection:', error);
       toast.error("Failed to delete the vehicle detection. Please try again.");
     }
+  };
+
+  const paginatedDetections = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedDetections.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedDetections, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(sortedDetections.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -448,7 +469,7 @@ export function DetectedVehicles({
             <Card>
               <CardHeader>
                 <CardTitle>Detected Vehicles Table</CardTitle>
-              <CardDescription>List of vehicles detected with speed, direction, and other details.</CardDescription>
+                <CardDescription>List of vehicles detected with speed, direction, and other details (most recent first).</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -461,56 +482,63 @@ export function DetectedVehicles({
                     </AlertDescription>
                   </Alert>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Thumbnail</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Camera</TableHead>
-                        <TableHead>Speed</TableHead>
-                        <TableHead>Direction</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detections.filter(detection => detection.real_world_speed_estimate != null).map((detection) => (
-                        <TableRow key={detection.id}>
-                          <TableCell>
-                            {detectionImages[detection.id] && detectionImages[detection.id].length > 0 && (
-                              <div className="w-36 rounded-md">
-                                <img
-                                  src={detectionImages[detection.id][Math.floor(detectionImages[detection.id].length / 2)]}
-                                  alt={`Vehicle detected at ${detection.detection_date}`}
-                                  className="rounded-md"
-                                  style={{ 
-                                    width: '100%', 
-                                    height: 'auto', 
-                                    objectFit: "cover", 
-                                    clipPath: "inset(15% 0 15% 0)" // Cropping top and bottom 15%
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>{detection.detection_date}</TableCell>
-                          <TableCell>{detection.speed_calibration_id}</TableCell>
-                          <TableCell>{detection.real_world_speed_estimate} mph</TableCell>
-                          <TableCell>{detection.direction}</TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="destructive" 
-                              size="icon" 
-                              className="rounded-full"
-                              onClick={() => handleDelete(detection.id)}
-                            >
-                              <TrashIcon className="w-5 h-5" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </TableCell>
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Thumbnail</TableHead>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Camera</TableHead>
+                          <TableHead>Speed</TableHead>
+                          <TableHead>Direction</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedDetections.map((detection) => (
+                          <TableRow key={detection.id}>
+                            <TableCell>
+                              {detectionImages[detection.id] && detectionImages[detection.id].length > 0 && (
+                                <div className="w-36 rounded-md">
+                                  <img
+                                    src={detectionImages[detection.id][Math.floor(detectionImages[detection.id].length / 2)]}
+                                    alt={`Vehicle detected at ${detection.detection_date}`}
+                                    className="rounded-md"
+                                    style={{ 
+                                      width: '100%', 
+                                      height: 'auto', 
+                                      objectFit: "cover", 
+                                      clipPath: "inset(15% 0 15% 0)" // Cropping top and bottom 15%
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>{format(parseISO(detection.detection_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
+                            <TableCell>{detection.speed_calibration_id}</TableCell>
+                            <TableCell>{detection.real_world_speed_estimate} mph</TableCell>
+                            <TableCell>{detection.direction}</TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="destructive" 
+                                size="icon" 
+                                className="rounded-full"
+                                onClick={() => handleDelete(detection.id)}
+                              >
+                                <TrashIcon className="w-5 h-5" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -561,7 +589,7 @@ function ScatterPlotChart({ data }: { data: Detection[] }) {
   };
 
   const formattedData = useMemo(() => data.map(d => ({
-    time: new Date(d.detection_date).toLocaleTimeString(),
+    time: format(parseISO(d.detection_date), 'HH:mm:ss'),
     speed: d.real_world_speed_estimate,
     direction: d.direction
   })).filter(d => d.speed !== null), [data]);
