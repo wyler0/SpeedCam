@@ -32,9 +32,9 @@ from config import DETECTIONS_DATA_PATH, LATEST_DETECTION_IMAGE_PATH, TEMP_DATA_
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+console_handler.setLevel(logging.ERROR)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
@@ -338,7 +338,7 @@ class SpeedDetector():
                     
                     # Debug time deltas
                     new_read_time_wall = time.time()
-                    logger.debug(f"Overall: {new_read_time_wall - last_read_time_wall: .4f}, YOLO: {time_b - time_a: .4f}, FPS: {1 / (new_read_time_wall - last_read_time_wall): .4f}")
+                    #logger.debug(f"Overall: {new_read_time_wall - last_read_time_wall: .4f}, YOLO: {time_b - time_a: .4f}, FPS: {1 / (new_read_time_wall - last_read_time_wall): .4f}")
                     last_read_time_wall = new_read_time_wall
 
                 # Check for finished events
