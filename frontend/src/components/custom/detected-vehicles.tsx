@@ -95,7 +95,7 @@ export function DetectedVehicles({
   // Add this memoized sorted detections array
   const sortedDetections = useMemo(() => {
     return [...detections]
-      //.filter(detection => detection.real_world_speed_estimate != null)
+      .filter(detection => detection.real_world_speed_estimate != null)
       .sort((a, b) => parseISO(b.detection_date).getTime() - parseISO(a.detection_date).getTime());
   }, [detections]);
 
